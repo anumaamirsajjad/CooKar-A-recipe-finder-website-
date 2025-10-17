@@ -1,27 +1,18 @@
-from flask import Flask, render_template, request, redirect
-from pymongo import MongoClient
+# Main entry point (like server.js)
+
+from flask import Flask
+from routes.comment_routes import comment_routes
+from routes.cuisine_routes import cuisine_routes
 
 app = Flask(__name__)
 
-# connect to your MongoDB cluster
-client = MongoClient("mongodb+srv://l230893_db_user:FuFtw6DUTItdC74F@cluster0.q3zi5uv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0")
+# Register routes
+app.register_blueprint(comment_routes)
+app.register_blueprint(cuisine_routes)
 
-db = client["students_db"]
-collection = db["students"]
+@app.route("/")
+def home():
+    return "✅ Flask connected with MongoDB Atlas successfully!"
 
-@app.route('/')
-def index():
-    students = list(collection.find())
-    return render_template('index.html', students=students)
-
-@app.route('/add', methods=['GET', 'POST'])
-def add_student():
-    if request.method == 'POST':
-        name = request.form['name']
-        course = request.form['course']
-        collection.insert_one({"name": name, "course": course})
-        return redirect('/')
-    return render_template('add_student.html')
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     app.run(debug=True)
