@@ -1,8 +1,8 @@
-from flask import Blueprint, jsonify, request
-from db import get_db  # Change this line
+from flask import Blueprint, jsonify, request, Response
+from db import get_db
+from bson.json_util import dumps
 
 rating_routes = Blueprint("rating_routes", __name__)
-
 
 # CREATE - Add new rating
 @rating_routes.route("/ratings", methods=["POST"])
@@ -18,8 +18,8 @@ def add_rating():
 def get_ratings():
     db = get_db()
     rating_collection = db["Rating"]
-    ratings = list(rating_collection.find({}, {"_id": 0}))
-    return jsonify(ratings)
+    ratings = list(rating_collection.find({}))
+    return Response(dumps(ratings), mimetype="application/json")
 
 # UPDATE - Edit rating by name
 @rating_routes.route("/ratings/<string:name>", methods=["PUT"])

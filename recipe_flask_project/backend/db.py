@@ -1,22 +1,27 @@
+# db.py
 from pymongo import MongoClient
 from flask import g
-import os
 
 def get_db():
     """
-    Get MongoDB database connection for MongoDB Atlas
+    Returns a MongoDB database instance using MongoDB Atlas.
+    Uses Flask's 'g' to store connection for each request.
     """
-    if 'db' not in g:
-        # MongoDB Atlas connection string
-        # Replace with your actual connection string from MongoDB
-        #  Atlas
-        connection_string = "mongodb+srv://l230893_db_user:FuFtw6DUTItdC74F@cluster0.q3zi5uv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
-        
-        
+    if "db" not in g:
+        connection_string = (
+            "mongodb+srv://l230893_db_user:FuFtw6DUTItdC74F"
+            "@cluster0.q3zi5uv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+        )
+
         client = MongoClient(connection_string)
-        g.db = client["flaskAppDB"]  # Your database name in Atlas
+        g.db = client["flaskAppDB"]  # Your Atlas database name
+
     return g.db
 
 def close_db(e=None):
-    # MongoDB connections are handled automatically
-    pass
+    """
+    Optional cleanup — MongoDB handles pooling automatically.
+    """
+    db = g.pop("db", None)
+    if db is not None:
+        pass  # client.close() not required for Atlas

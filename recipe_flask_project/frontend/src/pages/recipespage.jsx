@@ -15,29 +15,34 @@ const RecipeFinder = () => {
     return parts[parts.length - 1] || 'Spicy Black-Eyed Pea Curry with Swiss Chard and Roasted Eggplant';
   };
 
-  // Fetch recipe data
+  // Fetch recipe and ingredients
   useEffect(() => {
     const fetchRecipeData = async () => {
       try {
         setLoading(true);
         const recipeName = getRecipeNameFromUrl();
-        
+
         // Fetch recipe details
-        const recipeResponse = await fetch(`http://localhost:5000/api/recipes/${encodeURIComponent(recipeName)}`);
-        if (!recipeResponse.ok) {
-          throw new Error('Failed to fetch recipe');
-        }
+        const recipeResponse = await fetch(
+          `http://localhost:5000/api/recipes/${encodeURIComponent(recipeName)}`
+        );
+        if (!recipeResponse.ok) throw new Error('Failed to fetch recipe');
         const recipeData = await recipeResponse.json();
         setRecipe(recipeData);
         setIsFavorite(recipeData.is_favorite || false);
 
-        // Fetch all ingredients
-        const ingredientsResponse = await fetch('http://localhost:5000/api/ingredients');
-        if (!ingredientsResponse.ok) {
-          throw new Error('Failed to fetch ingredients');
+        // Fetch ingredients only for this recipe
+        if (recipeData.ingredient_names && recipeData.ingredient_names.length > 0) {
+          const ingredientNames = recipeData.ingredient_names.join(',');
+          const ingredientsResponse = await fetch(
+            `http://localhost:5000/api/ingredients?names=${encodeURIComponent(ingredientNames)}`
+          );
+          if (!ingredientsResponse.ok) throw new Error('Failed to fetch ingredients');
+          const ingredientsData = await ingredientsResponse.json();
+          setIngredients(ingredientsData);
+        } else {
+          setIngredients([]);
         }
-        const ingredientsData = await ingredientsResponse.json();
-        setIngredients(ingredientsData);
 
       } catch (err) {
         setError(err.message);
@@ -55,11 +60,14 @@ const RecipeFinder = () => {
       if (!recipe) return;
       const titleOrName = recipe.title || recipe.name;
 
-      const response = await fetch(`http://localhost:5000/api/recipes/${encodeURIComponent(titleOrName)}/favorite`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ is_favorite: !isFavorite }),
-      });
+      const response = await fetch(
+        `http://localhost:5000/api/recipes/${encodeURIComponent(titleOrName)}/favorite`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_favorite: !isFavorite }),
+        }
+      );
 
       if (response.ok) {
         setIsFavorite(!isFavorite);
@@ -70,19 +78,9 @@ const RecipeFinder = () => {
     }
   };
 
-  // Filter ingredients for this recipe
-  const getRecipeIngredients = () => {
-    if (!recipe || !recipe.ingredient_names || !ingredients.length) return [];
-    return ingredients.filter(ingredient => 
-      recipe.ingredient_names.includes(ingredient.name)
-    );
-  };
-
   if (loading) return <div className="recipe-finder"><div className="loading">Loading recipe...</div></div>;
   if (error) return <div className="recipe-finder"><div className="error">Error: {error}</div></div>;
   if (!recipe) return <div className="recipe-finder"><div className="error">Recipe not found</div></div>;
-
-  const recipeIngredients = getRecipeIngredients();
 
   return (
     <div className="recipe-finder">
@@ -135,8 +133,8 @@ const RecipeFinder = () => {
           <h3>Ingredients</h3>
           <table className="ingredients-table">
             <tbody>
-              {recipeIngredients.length > 0 ? (
-                recipeIngredients.map((ingredient, index) => (
+              {ingredients.length > 0 ? (
+                ingredients.map((ingredient, index) => (
                   <tr key={index}>
                     <td>{ingredient.name}</td>
                     <td>{ingredient.quantity || ''}{ingredient.unit ? ` ${ingredient.unit}` : ''}</td>

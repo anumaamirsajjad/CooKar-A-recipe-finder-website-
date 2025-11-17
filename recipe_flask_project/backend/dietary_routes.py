@@ -1,8 +1,8 @@
-from flask import Blueprint, jsonify, request
-from db import get_db  # Change this line
+from flask import Blueprint, jsonify, request, Response
+from db import get_db
+from bson.json_util import dumps
 
 dietary_routes = Blueprint("dietary_routes", __name__)
-
 
 # CREATE - Add new dietary preference
 @dietary_routes.route("/dietary-preferences", methods=["POST"])
@@ -18,17 +18,17 @@ def add_dietary_preference():
 def get_dietary_preferences():
     db = get_db()
     dietary_collection = db["DietaryPreference"]
-    dietary_preferences = list(dietary_collection.find({}, {"_id": 0}))
-    return jsonify(dietary_preferences)
+    dietary_preferences = list(dietary_collection.find({}))
+    return Response(dumps(dietary_preferences), mimetype="application/json")
 
 # READ - Get dietary preference by name
 @dietary_routes.route("/dietary-preferences/<string:name>", methods=["GET"])
 def get_dietary_preference(name):
     db = get_db()
     dietary_collection = db["DietaryPreference"]
-    dietary_preference = dietary_collection.find_one({"name": name}, {"_id": 0})
+    dietary_preference = dietary_collection.find_one({"name": name})
     if dietary_preference:
-        return jsonify(dietary_preference)
+        return Response(dumps(dietary_preference), mimetype="application/json")
     return jsonify({"message": "No matching dietary preference found."}), 404
 
 # UPDATE - Edit dietary preference by name

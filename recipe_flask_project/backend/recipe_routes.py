@@ -1,6 +1,7 @@
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, Response
 from db import get_db
 import urllib.parse
+from bson.json_util import dumps  # handles ObjectId serialization
 
 recipe_routes = Blueprint("recipe_routes", __name__)
 
@@ -27,7 +28,6 @@ def add_recipe():
     recipe_collection.insert_one(data)
     return jsonify({"message": "Recipe added successfully!"}), 201
 
-
 # GET recipe by name/title
 @recipe_routes.route("/recipes/<string:name>", methods=["GET"])
 def get_recipe_by_name(name):
@@ -35,9 +35,6 @@ def get_recipe_by_name(name):
     recipe_collection = db["Recipe"]
     
     decoded_name = urllib.parse.unquote(name)
-    print(f"Searching for recipe: {decoded_name}")
-
-    # Search by title or name (covers Spoonacular + custom)
     recipe = recipe_collection.find_one({
         "$or": [
             {"title": decoded_name},
@@ -46,24 +43,19 @@ def get_recipe_by_name(name):
     })
 
     if not recipe:
-        print(f"Recipe NOT found: {decoded_name}")
         return jsonify({"message": "No matching recipe found."}), 404
 
-    # Convert ObjectId to string
-    recipe["_id"] = str(recipe["_id"])
-    print(f"Recipe found: {recipe.get('title') or recipe.get('name')}")
-
-    return jsonify(recipe)
-
+    # Return as JSON using dumps to handle ObjectId
+    return Response(dumps(recipe), mimetype="application/json")
 
 # READ - Get all recipes
 @recipe_routes.route("/recipes", methods=["GET"])
 def get_recipes():
     db = get_db()
     recipe_collection = db["Recipe"]
-    recipes = list(recipe_collection.find({}, {"_id": 0}))
-    return jsonify(recipes)
-
+    
+    recipes = list(recipe_collection.find({}))
+    return Response(dumps(recipes), mimetype="application/json")
 
 # UPDATE - Edit recipe by recipe_id
 @recipe_routes.route("/recipes/update/<string:recipe_id>", methods=["PUT"])
@@ -78,7 +70,6 @@ def update_recipe(recipe_id):
         return jsonify({"message": "Recipe updated successfully!"})
     
     return jsonify({"message": "No matching recipe found."}), 404
-
 
 # DELETE - Delete recipe by recipe_id
 @recipe_routes.route("/recipes/delete/<string:recipe_id>", methods=["DELETE"])
