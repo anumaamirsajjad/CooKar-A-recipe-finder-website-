@@ -8,36 +8,54 @@ const RecipeFinder = () => {
   const [error, setError] = useState(null);
   const [isFavorite, setIsFavorite] = useState(false);
 
-  // Extract recipe name from URL or use default
-  const getRecipeNameFromUrl = () => {
+  // Extract recipe title from URL
+  const getRecipeTitleFromUrl = () => {
     const path = window.location.pathname;
     const parts = path.split('/');
-    return parts[parts.length - 1] || 'Spicy Black-Eyed Pea Curry with Swiss Chard and Roasted Eggplant';
+    return decodeURIComponent(parts[parts.length - 1]) || 'Spicy Black-Eyed Pea Curry with Swiss Chard and Roasted Eggplant';  // <-- title from URL
   };
 
-  // Fetch recipe and ingredients
   useEffect(() => {
     const fetchRecipeData = async () => {
       try {
         setLoading(true);
-        const recipeName = getRecipeNameFromUrl();
+        const recipeTitle = getRecipeTitleFromUrl();
 
-        // Fetch recipe details
+        // ---- 1) FETCH RECIPE BY TITLE ----
         const recipeResponse = await fetch(
-          `http://localhost:5000/api/recipes/${encodeURIComponent(recipeName)}`
+          `http://localhost:5000/api/recipes/${encodeURIComponent(recipeTitle)}`
         );
-        if (!recipeResponse.ok) throw new Error('Failed to fetch recipe');
+
+        if (!recipeResponse.ok) throw new Error("Failed to fetch recipe");
+
         const recipeData = await recipeResponse.json();
+
+        // ⭐ ADD THIS HERE ⭐
+        console.log("Ingredients from recipe:", recipeData.ingredients);
         setRecipe(recipeData);
         setIsFavorite(recipeData.is_favorite || false);
+ // ---- 2) FETCH INGREDIENT DETAILS ----
+      if (recipeData.ingredients && recipeData.ingredients.length > 0) {
+        
+        // Normalize IDs whether string or {$oid: "..."}
+        const ids = recipeData.ingredients.map(item =>
+          typeof item === "string" ? item : item.$oid
+        );
 
-        // Fetch ingredients only for this recipe
-        if (recipeData.ingredient_names && recipeData.ingredient_names.length > 0) {
-          const ingredientNames = recipeData.ingredient_names.join(',');
-          const ingredientsResponse = await fetch(
-            `http://localhost:5000/api/ingredients?names=${encodeURIComponent(ingredientNames)}`
-          );
-          if (!ingredientsResponse.ok) throw new Error('Failed to fetch ingredients');
+        console.log("Extracted IDs:", ids);
+
+        // Fetch ingredients
+        const ingredientsResponse = await fetch(
+          "http://localhost:5000/api/ingredients/many",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ ids })
+          }
+        );
+
+          if (!ingredientsResponse.ok) throw new Error("Failed to fetch ingredients");
+
           const ingredientsData = await ingredientsResponse.json();
           setIngredients(ingredientsData);
         } else {
@@ -58,10 +76,11 @@ const RecipeFinder = () => {
   const toggleFavorite = async () => {
     try {
       if (!recipe) return;
-      const titleOrName = recipe.title || recipe.name;
+
+      const recipeTitle = recipe.title; // <-- Use title
 
       const response = await fetch(
-        `http://localhost:5000/api/recipes/${encodeURIComponent(titleOrName)}/favorite`,
+        `http://localhost:5000/api/recipes/${encodeURIComponent(recipeTitle)}/favorite`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -71,10 +90,12 @@ const RecipeFinder = () => {
 
       if (response.ok) {
         setIsFavorite(!isFavorite);
-        setRecipe(prev => prev ? { ...prev, is_favorite: !isFavorite } : null);
+        setRecipe(prev =>
+          prev ? { ...prev, is_favorite: !isFavorite } : null
+        );
       }
     } catch (err) {
-      console.error('Error updating favorite:', err);
+      console.error("Error updating favorite:", err);
     }
   };
 
@@ -98,35 +119,16 @@ const RecipeFinder = () => {
         >
           {isFavorite ? '★ Added to Favorites' : '☆ Add to Favorites'}
         </button>
-        {recipe.video_url && (
-          <a 
-            href={recipe.video_url} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="video-btn"
-          >
-            ▶ Video
-          </a>
-        )}
       </div>
 
       <div className="recipe-content">
         <section className="recipe-header-section">
-          <h2 className="recipe-title">{recipe.title || recipe.name}</h2>
-          <div className="recipe-tags">
-            {recipe.categories && recipe.categories.map((category, index) => (
-              <span key={index} className={`tag ${category.toLowerCase().replace(' ', '-')}`}>
-                {category}
-              </span>
-            ))}
-          </div>
+          <h2 className="recipe-title">{recipe.title}</h2>
         </section>
 
         <section className="instructions-section">
           <h3>Instructions</h3>
-          <div className="instruction-step">
-            <p>{recipe.summary || "No instructions available."}</p>
-          </div>
+          <p>{recipe.summary || "No instructions available."}</p>
         </section>
 
         <section className="ingredients-section">
@@ -137,7 +139,10 @@ const RecipeFinder = () => {
                 ingredients.map((ingredient, index) => (
                   <tr key={index}>
                     <td>{ingredient.name}</td>
-                    <td>{ingredient.quantity || ''}{ingredient.unit ? ` ${ingredient.unit}` : ''}</td>
+                    <td>
+                      {ingredient.quantity || ''}
+                      {ingredient.unit ? ` ${ingredient.unit}` : ''}
+                    </td>
                   </tr>
                 ))
               ) : (
@@ -146,17 +151,6 @@ const RecipeFinder = () => {
             </tbody>
           </table>
         </section>
-
-        {recipe.related_recipes && recipe.related_recipes.length > 0 && (
-          <section className="related-recipes">
-            <h3>Related Recipes</h3>
-            {recipe.related_recipes.map((relatedRecipe, index) => (
-              <div key={index} className="related-recipe-item">
-                {typeof relatedRecipe === 'object' ? relatedRecipe.title || relatedRecipe.name : relatedRecipe}
-              </div>
-            ))}
-          </section>
-        )}
       </div>
     </div>
   );

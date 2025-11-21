@@ -3,6 +3,7 @@ from db import get_db
 import urllib.parse
 from bson.json_util import dumps  # handles ObjectId serialization
 
+
 recipe_routes = Blueprint("recipe_routes", __name__)
 
 # Helper: Validate required fields
@@ -28,13 +29,15 @@ def add_recipe():
     recipe_collection.insert_one(data)
     return jsonify({"message": "Recipe added successfully!"}), 201
 
-# GET recipe by name/title
+
+
 @recipe_routes.route("/recipes/<string:name>", methods=["GET"])
 def get_recipe_by_name(name):
     db = get_db()
     recipe_collection = db["Recipe"]
     
     decoded_name = urllib.parse.unquote(name)
+
     recipe = recipe_collection.find_one({
         "$or": [
             {"title": decoded_name},
@@ -45,8 +48,12 @@ def get_recipe_by_name(name):
     if not recipe:
         return jsonify({"message": "No matching recipe found."}), 404
 
-    # Return as JSON using dumps to handle ObjectId
-    return Response(dumps(recipe), mimetype="application/json")
+    # Use dumps to safely convert ObjectId
+    return Response(
+        dumps(recipe),
+        mimetype="application/json"
+    )
+
 
 # READ - Get all recipes
 @recipe_routes.route("/recipes", methods=["GET"])
