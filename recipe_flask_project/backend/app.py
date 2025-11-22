@@ -11,6 +11,8 @@ from recipe_routes import recipe_routes
 from comment_routes import comment_routes
 
 
+
+
 app = Flask(__name__)
 CORS(app)
 
@@ -20,6 +22,8 @@ app.register_blueprint(ingredients_routes, url_prefix="/api")
 app.register_blueprint(dietary_routes, url_prefix="/api")
 app.register_blueprint(recipe_routes, url_prefix="/api")
 app.register_blueprint(comment_routes, url_prefix="/api")
+
+
 
 
 @app.route("/test-db")
