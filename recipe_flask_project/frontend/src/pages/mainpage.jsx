@@ -433,11 +433,8 @@ function MainPage() {
           fetch("http://localhost:5000/api/cuisines"),
           fetch("http://localhost:5000/api/dietary-preferences"),
         ]);
-        const cuisineData = await cuisineRes.json();
-        const dietaryData = await dietaryRes.json();
-
-        setCuisines(Array.isArray(cuisineData) ? cuisineData.map(c => c.name) : []);
-        setDietaryPrefs(Array.isArray(dietaryData) ? dietaryData.map(d => d.name) : []);
+        setCuisines(await cuisineRes.json());
+        setDietaryPrefs(await dietaryRes.json());
       } catch (err) {
         console.error("Error fetching filters:", err);
       }
@@ -448,31 +445,38 @@ function MainPage() {
         const res = await fetch("http://localhost:5000/api/recipes");
         const baseRecipes = await res.json();
 
+        // Enrich each recipe with full details (like RecipeFinder does)
         const enriched = await Promise.all(
           baseRecipes.map(async (recipe) => {
-            const id =
-              recipe.recipe_id?.$oid ||
-              recipe.recipe_id ||
-              recipe._id?.$oid ||
-              recipe._id;
-
-            let ingredients = [];
             try {
-              const ingRes = await fetch(`http://localhost:5000/api/ingredients/by-recipe/${id}`);
-              if (ingRes.ok) ingredients = await ingRes.json();
-            } catch (err) {
-              console.error("Ingredient fetch failed:", err);
-            }
+              // Fetch full recipe by title
+              const detailRes = await fetch(
+                `http://localhost:5000/api/recipes/${encodeURIComponent(recipe.title)}`
+              );
+              if (!detailRes.ok) return recipe;
+              const detail = await detailRes.json();
 
-            let comments = [];
-            try {
-              const comRes = await fetch(`http://localhost:5000/api/comments/by-recipe/${id}`);
-              if (comRes.ok) comments = await comRes.json();
-            } catch (err) {
-              console.error("Comment fetch failed:", err);
-            }
+              // Resolve ingredient IDs
+              let ingredients = [];
+              if (detail.ingredients && detail.ingredients.length > 0) {
+                const ids = detail.ingredients.map((item) =>
+                  typeof item === "string" ? item : item.$oid
+                );
+                const ingRes = await fetch("http://localhost:5000/api/ingredients/many", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ ids }),
+                });
+                if (ingRes.ok) {
+                  ingredients = await ingRes.json();
+                }
+              }
 
-            return { ...recipe, ingredients, comments };
+              return { ...detail, ingredients };
+            } catch (err) {
+              console.error("Error enriching recipe:", err);
+              return recipe;
+            }
           })
         );
 
@@ -496,13 +500,8 @@ function MainPage() {
         )
       : true;
 
-    const matchesCuisine = selectedCuisine
-      ? recipe.cuisine === selectedCuisine
-      : true;
-
-    const matchesDietary = selectedDietary
-      ? recipe.dietary === selectedDietary
-      : true;
+    const matchesCuisine = selectedCuisine ? recipe.cuisine === selectedCuisine : true;
+    const matchesDietary = selectedDietary ? recipe.dietary === selectedDietary : true;
 
     return matchesSearch && matchesCuisine && matchesDietary;
   });
@@ -536,7 +535,6 @@ function MainPage() {
           marginBottom: "40px",
         }}
       >
-        {/* Search Bar */}
         <div style={{ display: "flex", gap: "16px", marginBottom: "30px", flexWrap: "wrap" }}>
           <input
             type="text"
@@ -552,22 +550,8 @@ function MainPage() {
               backgroundColor: "#fff",
             }}
           />
-          <button
-            style={{
-              padding: "14px 24px",
-              backgroundColor: "#4B2E2E",
-              color: "#fff",
-              fontWeight: "600",
-              borderRadius: "8px",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            Search
-          </button>
         </div>
 
-        {/* Dropdowns */}
         <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 300px" }}>
             <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#4B2E2E" }}>
@@ -587,8 +571,8 @@ function MainPage() {
             >
               <option value="">All Preferences</option>
               {dietaryPrefs.map((diet, idx) => (
-                <option key={idx} value={diet}>
-                  {diet}
+                <option key={idx} value={diet.name || diet}>
+                  {diet.name || diet}
                 </option>
               ))}
             </select>
@@ -612,8 +596,8 @@ function MainPage() {
             >
               <option value="">All Cuisines</option>
               {cuisines.map((cuisine, idx) => (
-                <option key={idx} value={cuisine}>
-                  {cuisine}
+                <option key={idx} value={cuisine.name || cuisine}>
+                  {cuisine.name || cuisine}
                 </option>
               ))}
             </select>
@@ -713,7 +697,7 @@ function MainPage() {
                     Method:
                   </h4>
                   <p style={{ margin: 0, color: "#555" }}>
-                    {(recipe.instructions || "No instructions provided.")
+                    {(recipe.instructions || recipe.summary || "No instructions provided.")
                       .split(" ")
                       .slice(0, 20)
                       .join(" ")}...
