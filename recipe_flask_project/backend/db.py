@@ -44,8 +44,8 @@ def get_db():
         client = MongoClient(
             connection_string,
             serverSelectionTimeoutMS=50000,  # 50 seconds to find a primary
-            connectTimeoutMS=20000,          # 20 seconds to establish connection
-            socketTimeoutMS=20000            # 20 seconds for read/write operations
+            connectTimeoutMS=30000,          # 20 seconds to establish connection
+            socketTimeoutMS=30000            # 20 seconds for read/write operations
         )
 
         g.db = client["flaskAppDB"]  # Your Atlas database name

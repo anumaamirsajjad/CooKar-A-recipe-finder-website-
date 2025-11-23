@@ -440,47 +440,11 @@ function MainPage() {
       }
     };
 
-    const fetchRecipesWithDetails = async () => {
+    const fetchRecipes = async () => {
       try {
         const res = await fetch("http://localhost:5000/api/recipes");
-        const baseRecipes = await res.json();
-
-        // Enrich each recipe with full details (like RecipeFinder does)
-        const enriched = await Promise.all(
-          baseRecipes.map(async (recipe) => {
-            try {
-              // Fetch full recipe by title
-              const detailRes = await fetch(
-                `http://localhost:5000/api/recipes/${encodeURIComponent(recipe.title)}`
-              );
-              if (!detailRes.ok) return recipe;
-              const detail = await detailRes.json();
-
-              // Resolve ingredient IDs
-              let ingredients = [];
-              if (detail.ingredients && detail.ingredients.length > 0) {
-                const ids = detail.ingredients.map((item) =>
-                  typeof item === "string" ? item : item.$oid
-                );
-                const ingRes = await fetch("http://localhost:5000/api/ingredients/many", {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ ids }),
-                });
-                if (ingRes.ok) {
-                  ingredients = await ingRes.json();
-                }
-              }
-
-              return { ...detail, ingredients };
-            } catch (err) {
-              console.error("Error enriching recipe:", err);
-              return recipe;
-            }
-          })
-        );
-
-        setRecipes(enriched);
+        const data = await res.json();
+        setRecipes(Array.isArray(data) ? data : []);
       } catch (err) {
         console.error("Error fetching recipes:", err);
       } finally {
@@ -489,19 +453,24 @@ function MainPage() {
     };
 
     fetchFilters();
-    fetchRecipesWithDetails();
+    fetchRecipes();
   }, []);
 
   const filteredRecipes = recipes.filter((recipe) => {
     const matchesSearch = searchTerm
       ? recipe.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        recipe.ingredients?.some((ing) =>
-          (ing.name || "").toLowerCase().includes(searchTerm.toLowerCase())
+        (recipe.ingredientNames || []).some((ing) =>
+          ing.toLowerCase().includes(searchTerm.toLowerCase())
         )
       : true;
 
-    const matchesCuisine = selectedCuisine ? recipe.cuisine === selectedCuisine : true;
-    const matchesDietary = selectedDietary ? recipe.dietary === selectedDietary : true;
+    const matchesCuisine = selectedCuisine
+      ? (recipe.cuisineNames || []).includes(selectedCuisine)
+      : true;
+
+    const matchesDietary = selectedDietary
+      ? (recipe.dietaryNames || []).includes(selectedDietary)
+      : true;
 
     return matchesSearch && matchesCuisine && matchesDietary;
   });
@@ -510,64 +479,32 @@ function MainPage() {
 
   return (
     <div style={{ minHeight: "100vh", backgroundColor: "#fdf6e3", padding: "40px" }}>
-      {/* Title */}
-      <h1
-        style={{
-          fontSize: "64px",
-          fontWeight: "bold",
-          color: "#4B2E2E",
-          textAlign: "center",
-          marginBottom: "40px",
-        }}
-      >
+      <h1 style={{ fontSize: "64px", fontWeight: "bold", color: "#4B2E2E", textAlign: "center", marginBottom: "40px" }}>
         Cookar
       </h1>
+      <p style={{ textAlign: "center", fontSize: "20px", color: "#666", marginBottom: "50px" }}>
+        Discover recipes by cuisine, dietary preference, or search by ingredients.
+      </p>
 
       {/* Search + Filters */}
-      <div
-        style={{
-          maxWidth: "800px",
-          margin: "0 auto",
-          backgroundColor: "#fff",
-          padding: "30px",
-          borderRadius: "16px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          marginBottom: "40px",
-        }}
-      >
+      <div style={{ maxWidth: "800px", margin: "0 auto", backgroundColor: "#fff", padding: "30px", borderRadius: "16px", boxShadow: "0 4px 12px rgba(0,0,0,0.1)", marginBottom: "40px" }}>
         <div style={{ display: "flex", gap: "16px", marginBottom: "30px", flexWrap: "wrap" }}>
           <input
             type="text"
             placeholder="Search recipes by name or ingredient..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              flex: "1 1 300px",
-              padding: "14px 18px",
-              fontSize: "16px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              backgroundColor: "#fff",
-            }}
+            style={{ flex: "1 1 300px", padding: "14px 18px", fontSize: "16px", borderRadius: "8px", border: "1px solid #ccc", backgroundColor: "#fff" }}
           />
         </div>
 
         <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
           <div style={{ flex: "1 1 300px" }}>
-            <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#4B2E2E" }}>
-              Dietary Preference
-            </label>
+            <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#4B2E2E" }}>Dietary Preference</label>
             <select
               value={selectedDietary}
               onChange={(e) => setSelectedDietary(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px 16px",
-                borderRadius: "8px",
-                border: "1px solid #ccc",
-                fontSize: "16px",
-                backgroundColor: "#fff",
-              }}
+              style={{ width: "100%", padding: "12px 16px", borderRadius: "8px", border: "1px solid #ccc", fontSize: "16px", backgroundColor: "#fff" }}
             >
               <option value="">All Preferences</option>
               {dietaryPrefs.map((diet, idx) => (
@@ -579,20 +516,11 @@ function MainPage() {
           </div>
 
           <div style={{ flex: "1 1 300px" }}>
-            <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#4B2E2E" }}>
-              Cuisine
-            </label>
+            <label style={{ display: "block", marginBottom: "8px", fontWeight: "500", color: "#4B2E2E" }}>Cuisine</label>
             <select
               value={selectedCuisine}
               onChange={(e) => setSelectedCuisine(e.target.value)}
-              style={{
-                width: "100%",
-                padding: "12px 16px",
-                borderRadius: "8px",
-                border: "1px solid #ccc",
-                fontSize: "16px",
-                backgroundColor: "#fff",
-              }}
+              style={{ width: "100%", padding: "12px 16px", borderRadius: "8px", border: "1px solid #ccc", fontSize: "16px", backgroundColor: "#fff" }}
             >
               <option value="">All Cuisines</option>
               {cuisines.map((cuisine, idx) => (
@@ -605,14 +533,8 @@ function MainPage() {
         </div>
       </div>
 
-            {/* Recipe Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-          gap: "30px",
-        }}
-      >
+      {/* Recipe Cards */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "30px" }}>
         {filteredRecipes.map((recipe, idx) => (
           <Link
             key={idx}
@@ -636,68 +558,45 @@ function MainPage() {
                 />
               )}
               <div style={{ padding: "20px" }}>
-                {/* Title */}
                 <h2 style={{ margin: "0 0 10px", color: "#4B2E2E", fontWeight: "700" }}>
                   {recipe.title}
                 </h2>
 
                 {/* Rating */}
                 <div style={{ color: "#666", fontSize: "14px", marginBottom: "10px" }}>
-                  {"⭐".repeat(Math.round(recipe.rating || 4))}{" "}
-                  {Number(recipe.rating || 4).toFixed(1)} ({recipe.reviews || 0} reviews)
-                </div>
-
-                {/* Servings + Calories */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "10px",
-                    fontSize: "14px",
-                  }}
-                >
-                  <span>🍽️ {recipe.serving_size || "N/A"} servings</span>
-                  <span>🔥 {recipe.calories || "?"} cal</span>
+                  {"⭐".repeat(Math.round(Number(recipe.ratingAvg || 0)))}{" "}
+                  {recipe.ratingAvg ? Number(recipe.ratingAvg).toFixed(1) : "N/A"} (
+                  {recipe.ratingCount || 0} ratings)
                 </div>
 
                 {/* Cuisine + Dietary */}
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    marginBottom: "10px",
-                    fontSize: "14px",
-                    color: "#4B2E2E",
-                  }}
-                >
-                  <span>🌍 {recipe.cuisine || "Unknown"}</span>
-                  <span>🥗 {recipe.dietary || "Unspecified"}</span>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px", color: "#4B2E2E" }}>
+                  <span>🌍 {recipe.cuisineNames?.length ? recipe.cuisineNames.join(", ") : "Unknown"}</span>
+                  <span>🥗 {recipe.dietaryNames?.length ? recipe.dietaryNames.join(", ") : "Unspecified"}</span>
                 </div>
 
+                
                 {/* Key Ingredients */}
-                <div style={{ marginBottom: "15px" }}>
-                  <h4 style={{ marginBottom: "5px", fontWeight: "600", color: "#4B2E2E" }}>
-                    Key Ingredients:
-                  </h4>
-                  <ul style={{ paddingLeft: "20px", margin: 0, color: "#555" }}>
-                    {(recipe.ingredients || [])
-                      .slice(0, 4)
-                      .map((ing, i) => (
-                        <li key={i}>
-                          {`${ing.quantity || ""} ${ing.unit || ""} ${ing.name || ""}`.trim()}
-                        </li>
-                      ))}
-                    {recipe.ingredients?.length > 4 && <li>...</li>}
-                  </ul>
-                </div>
+<div style={{ marginBottom: "15px" }}>
+  <h4 style={{ marginBottom: "5px" }}>Key Ingredients:</h4>
+  <p style={{ margin: 0, color: "#555" }}>
+    {(recipe.ingredientNames || [])
+      .slice(0, 4) // show first 4 ingredients only
+      .join(", ")}
+    {Array.isArray(recipe.ingredientNames) && recipe.ingredientNames.length > 4 && " ..."}
+  </p>
+</div>
 
-                {/* Method */}
+                                {/* Method */}
                 <div style={{ marginBottom: "15px" }}>
                   <h4 style={{ marginBottom: "5px", fontWeight: "600", color: "#4B2E2E" }}>
                     Method:
                   </h4>
                   <p style={{ margin: 0, color: "#555" }}>
-                    {(recipe.instructions || recipe.summary || "No instructions provided.")
+                    {(recipe.instructions ||
+                      recipe.method ||
+                      recipe.summary ||
+                      "No instructions provided.")
                       .split(" ")
                       .slice(0, 20)
                       .join(" ")}...
@@ -707,12 +606,11 @@ function MainPage() {
                 {/* Recent Comments */}
                 <div style={{ marginBottom: "15px" }}>
                   <h4 style={{ marginBottom: "5px", fontWeight: "600", color: "#4B2E2E" }}>
-                    Recent Comments:
+                    Recent comments:
                   </h4>
                   {Array.isArray(recipe.comments) && recipe.comments.length > 0 ? (
                     <p style={{ margin: 0, color: "#555" }}>
-                      “{recipe.comments[0].comment}”
-                      {recipe.comments.length > 1 && " ..."}
+                      “{recipe.comments[0]}” {recipe.comments.length > 1 && " ..."}
                     </p>
                   ) : (
                     <p style={{ margin: 0, color: "#999" }}>No comments</p>
