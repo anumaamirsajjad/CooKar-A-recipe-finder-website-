@@ -36,7 +36,7 @@
 //....................
 import React from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import MainPage from "./pages/mainpage";       // ensure file name matches casing
+import MainPage from "./pages/MainPage";       // ensure file name matches casing
 import RecipeFinder from "./pages/RecipeFinder";
 
 function App() {
