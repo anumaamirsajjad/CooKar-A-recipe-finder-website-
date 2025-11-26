@@ -1,0 +1,6 @@
+- SOLID principles are annotated inline.
+- Design patterns applied:
+- Composite (Recipe aggregates Ingredients, Comments, Ratings)
+- Strategy (search logic interchangeable)
+- Observer (Recipe notifies observers of changes)
+
