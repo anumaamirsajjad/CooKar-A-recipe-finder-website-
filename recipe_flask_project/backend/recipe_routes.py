@@ -174,10 +174,13 @@ def enrich_recipe(recipe, db):
     return recipe
 
 
+
 @recipe_routes.route("/recipes/<string:name>", methods=["GET"])
 def get_recipe_by_name(name):
     db = get_db()
     recipe_collection = db["Recipe"]
+
+    decoded_name = urllib.parse.unquote(name)
 
     decoded_name = urllib.parse.unquote(name)
     recipe = recipe_collection.find_one({
@@ -194,6 +197,13 @@ def get_recipe_by_name(name):
     return Response(dumps(recipe), mimetype="application/json")
 
 
+    # Return JSON safely including ObjectId → converted automatically
+    return Response(
+        dumps(recipe),
+        mimetype="application/json"
+    )
+
+# READ - Get all recipes
 @recipe_routes.route("/recipes", methods=["GET"])
 def get_recipes():
     db = get_db()
