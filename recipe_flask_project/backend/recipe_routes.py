@@ -122,20 +122,31 @@ def enrich_recipe(recipe, db):
     diet_collection = db["Dietary"]
     comments_collection = db["Comments"]
     ratings_collection = db["Ratings"]
+@recipe_routes.route("/cuisines", methods=["GET"])
+def get_cuisines():
+    db = get_db()
+    cuisines = list(db["Cuisine"].find({}, {"name": 1}))
+    return Response(dumps(cuisines), mimetype="application/json")
 
-    # ✅ Cuisine
-    if recipe.get("cuisine_ids"):
-        ids = resolve_ids(recipe["cuisine_ids"])
-        if ids:
-            cuisines = [c.get("name") for c in cuisine_collection.find({"_id": {"$in": ids}})]
-            recipe["cuisineNames"] = cuisines
+@recipe_routes.route("/dietary-preferences", methods=["GET"])
+def get_dietary_preferences():
+    db = get_db()
+    dietary_collection = db["DietaryPreference"]
+    dietary = list(dietary_collection.find({}, {"name": 1}))
+    return Response(dumps(dietary), mimetype="application/json")
+    # # ✅ Cuisine
+    # if recipe.get("cuisine_ids"):
+    #     ids = resolve_ids(recipe["cuisine_ids"])
+    #     if ids:
+    #         cuisines = [c.get("name") for c in cuisine_collection.find({"_id": {"$in": ids}})]
+    #         recipe["cuisineNames"] = cuisines
 
-    # ✅ Dietary Preferences
-    if recipe.get("diet_ids"):
-        ids = resolve_ids(recipe["diet_ids"])
-        if ids:
-            diets = [d.get("name") for d in diet_collection.find({"_id": {"$in": ids}})]
-            recipe["dietaryNames"] = diets
+    # # ✅ Dietary Preferences
+    # if recipe.get("diet_ids"):
+    #     ids = resolve_ids(recipe["diet_ids"])
+    #     if ids:
+    #         diets = [d.get("name") for d in diet_collection.find({"_id": {"$in": ids}})]
+    #         recipe["dietaryNames"] = diets
 
     # ✅ Ingredients
     if recipe.get("ingredients"):
