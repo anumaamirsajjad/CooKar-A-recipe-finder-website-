@@ -226,10 +226,11 @@
 #     return Response(dumps(enriched), mimetype="application/json")
 
 
-from flask import Blueprint, jsonify, Response
+from flask import Blueprint, jsonify, Response, request
 from db import get_db
 import urllib.parse
 from bson.json_util import dumps, ObjectId
+from datetime import datetime
 
 # ✅ Define the Blueprint
 recipe_routes = Blueprint("recipe_routes", __name__)
@@ -352,3 +353,89 @@ def get_recipes():
     enriched = [enrich_recipe(r, db) for r in recipes if r]
 
     return Response(dumps(enriched), mimetype="application/json")
+
+
+@recipe_routes.route("/recipes", methods=["POST"])
+def add_recipe():
+    db = get_db()
+    recipe_collection = db["Recipe"]
+    cuisine_collection = db["Cuisine"]
+    diet_collection = db["DietaryPreference"]
+
+    data = request.get_json()
+
+    # Basic validation
+    required_fields = ["title", "ingredients", "instructions", "servingSize", "image"]
+    if not data:
+        return jsonify({"error": "Missing JSON body"}), 400
+
+    missing = [f for f in required_fields if not data.get(f)]
+    if missing:
+        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+
+    # Validate ingredients
+    if not isinstance(data.get("ingredients"), list) or len(data.get("ingredients")) == 0:
+        return jsonify({"error": "Ingredients must be a non-empty list"}), 400
+
+    for idx, ing in enumerate(data.get("ingredients", [])):
+        if not isinstance(ing, dict) or not ing.get("name") or ing.get("quantity") in (None, "") or not ing.get("measurement"):
+            return jsonify({"error": f"Ingredient at index {idx} is missing required fields (name, quantity, measurement)"}), 400
+
+    # Normalize cuisines: accept `cuisineNames` (array of names) or single `cuisine` string
+    cuisine_names = []
+    if data.get("cuisineNames") and isinstance(data.get("cuisineNames"), list):
+        cuisine_names = [c for c in data.get("cuisineNames") if c]
+    elif data.get("cuisine"):
+        cuisine_names = [data.get("cuisine")]
+
+    cuisine_ids = []
+    for name in cuisine_names:
+        existing = cuisine_collection.find_one({"name": name})
+        if existing:
+            cuisine_ids.append(existing.get("_id"))
+        else:
+            res = cuisine_collection.insert_one({"name": name})
+            cuisine_ids.append(res.inserted_id)
+
+    # Normalize dietary preferences: accept `dietaryNames` or `dietaryPreference`
+    diet_names = []
+    if data.get("dietaryNames") and isinstance(data.get("dietaryNames"), list):
+        diet_names = [d for d in data.get("dietaryNames") if d]
+    elif data.get("dietaryPreference"):
+        diet_names = [data.get("dietaryPreference")]
+
+    diet_ids = []
+    for name in diet_names:
+        existing = diet_collection.find_one({"name": name})
+        if existing:
+            diet_ids.append(existing.get("_id"))
+        else:
+            res = diet_collection.insert_one({"name": name})
+            diet_ids.append(res.inserted_id)
+
+    # Prepare the document to insert
+    recipe_doc = {
+        "title": data.get("title"),
+        "ingredients": data.get("ingredients"),
+        "instructions": data.get("instructions"),
+        "servingSize": data.get("servingSize"),
+        "image": data.get("image"),
+        "created_at": datetime.utcnow(),
+    }
+
+    if cuisine_ids:
+        recipe_doc["cuisine_ids"] = cuisine_ids
+        recipe_doc["cuisineNames"] = cuisine_names
+
+    if diet_ids:
+        recipe_doc["diet_ids"] = diet_ids
+        recipe_doc["dietaryNames"] = diet_names
+
+    try:
+        result = recipe_collection.insert_one(recipe_doc)
+        # Fetch and enrich the created recipe before returning
+        created = recipe_collection.find_one({"_id": result.inserted_id})
+        created = enrich_recipe(created, db)
+        return Response(dumps(created), mimetype="application/json"), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500

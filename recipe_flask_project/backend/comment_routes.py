@@ -18,40 +18,37 @@ def add_comment():
         return response, 200
     
     db = get_db()
-    comment_collection = db.Comment
+    comment_collection = db["Comments"]
 
     data = request.get_json()
 
     if not data:
         return jsonify({"message": "Request body cannot be empty"}), 400
 
-    required_fields = ["user", "recipeId", "commentText", "date"]
-    for field in required_fields:
-        if field not in data:
-            return jsonify({"message": f"Missing field: {field}"}), 400
+    # Accept both field name formats
+    recipe_id_field = data.get("recipeId") or data.get("recipe_id")
+    comment_text = data.get("commentText") or data.get("comment")
+    
+    if not recipe_id_field or not data.get("user") or not comment_text or not data.get("date"):
+        return jsonify({"message": "Missing required fields: user, recipe_id/recipeId, comment/commentText, date"}), 400
 
     comment_doc = {
         "user": data["user"],
-        "recipeId": ObjectId(data["recipeId"]),
-        "commentText": data["commentText"],
+        "recipe_id": ObjectId(recipe_id_field),
+        "comment": comment_text,
         "date": data["date"],
     }
-    print("Incoming data:", data)
-    print("Inserting doc:", comment_doc)
-    print("Using DB:", db.name)
-    print("Collections:", db.list_collection_names())
-    print("Inserting into:", comment_collection)
 
-    comment_collection.insert_one(comment_doc)
+    result = comment_collection.insert_one(comment_doc)
 
-    return jsonify({"message": "Comment added successfully!"}), 201
+    return jsonify({"message": "Comment added successfully!", "id": str(result.inserted_id)}), 201
 
 
 # GET all comments
 @comment_routes.route("/comments", methods=["GET"])
 def get_comments():
     db = get_db()
-    comment_collection = db.Comment
+    comment_collection = db["Comments"]
 
     comments = list(comment_collection.find({}))
     return Response(dumps(comments), mimetype="application/json")
@@ -61,7 +58,7 @@ def get_comments():
 @comment_routes.route("/comments/<string:name>", methods=["PUT"])
 def update_comment(name):
     db = get_db()
-    comment_collection = db.Comment
+    comment_collection = db["Comments"]
 
     data = request.get_json()
     if not data:
@@ -79,7 +76,7 @@ def update_comment(name):
 @comment_routes.route("/comments/<string:name>", methods=["DELETE"])
 def delete_comment(name):
     db = get_db()
-    comment_collection = db.Comment
+    comment_collection = db["Comments"]
 
     result = comment_collection.delete_one({"name": name})
 
@@ -93,12 +90,40 @@ def delete_comment(name):
 @comment_routes.route("/comments/count/<string:recipe_id>", methods=["GET"])
 def get_comments_count(recipe_id):
     db = get_db()
-    comment_collection = db.Comment
+    comment_collection = db["Comments"]
 
     try:
         oid = ObjectId(recipe_id)
     except:
         return jsonify({"error": "Invalid recipe_id"}), 400
 
-    count = comment_collection.count_documents({"recipeId": oid})
+    # Check both field name formats
+    count = comment_collection.count_documents({
+        "$or": [
+            {"recipe_id": oid},
+            {"recipeId": oid}
+        ]
+    })
     return jsonify({"comments_count": count})
+
+
+# GET comments for a specific recipe
+@comment_routes.route("/comments/recipe/<string:recipe_id>", methods=["GET"])
+def get_recipe_comments(recipe_id):
+    db = get_db()
+    comment_collection = db["Comments"]
+
+    try:
+        oid = ObjectId(recipe_id)
+    except:
+        return jsonify({"error": "Invalid recipe_id"}), 400
+
+    # Fetch all comments for this recipe, checking both field formats
+    comments = list(comment_collection.find({
+        "$or": [
+            {"recipe_id": oid},
+            {"recipeId": oid}
+        ]
+    }).sort("date", -1))  # Sort by date, newest first
+    
+    return Response(dumps(comments), mimetype="application/json")

@@ -256,6 +256,14 @@ const RecipeFinder = () => {
   const [cuisines, setCuisines] = useState([]);
   const [dietaryPrefs, setDietaryPrefs] = useState([]); // ✅ new state
 
+  // Helper function to strip HTML tags
+  const stripHtmlTags = (html) => {
+    if (!html) return '';
+    const tmp = document.createElement('DIV');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
+  };
+
   // Extract title from URL
   const getRecipeTitleFromUrl = () => {
     const parts = window.location.pathname.split('/');
@@ -446,10 +454,10 @@ const RecipeFinder = () => {
           <section className="instructions-section-new">
             <h3>Cooking Instructions</h3>
 
-            {recipe.summary ? (
+            {recipe.summary || recipe.instructions ? (
               <div className="instruction-step-card">
                 <div className="step-number">1</div>
-                <p>{recipe.summary}</p>
+                <p>{stripHtmlTags(recipe.summary || recipe.instructions)}</p>
               </div>
             ) : (
               <p>No instructions available.</p>

@@ -66,7 +66,30 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
       image: formFields.image,
     };
 
-    handleAddRecipe(newRecipe);
+    // POST the new recipe to backend
+    fetch("http://localhost:5000/api/recipes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(newRecipe),
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const createdRecipe = await res.json();
+          // Pass back the enriched recipe from backend (includes rating, ids, etc.)
+          if (handleAddRecipe) handleAddRecipe(createdRecipe);
+          if (closeModal) closeModal();
+          alert("Recipe added successfully");
+        } else {
+          const json = await res.json().catch(() => ({}));
+          alert(json.error || json.message || "Failed to add recipe");
+        }
+      })
+      .catch((err) => {
+        console.error("Error adding recipe:", err);
+        alert("Network error while adding recipe");
+      });
   };
 
   return (

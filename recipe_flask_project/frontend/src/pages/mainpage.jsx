@@ -1140,7 +1140,6 @@ function MainPage() {
   const [selectedCuisine, setSelectedCuisine] = useState("");
   const [selectedDietary, setSelectedDietary] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false); // Manage modal visibility
-  const [newlyAddedRecipe, setNewlyAddedRecipe] = useState(null); // To reflect newly added recipe
 
   useEffect(() => {
     const fetchFilters = async () => {
@@ -1174,12 +1173,6 @@ function MainPage() {
     fetchRecipes();
   }, []);
 
-  useEffect(() => {
-    if (newlyAddedRecipe) {
-      setRecipes((prevRecipes) => [...prevRecipes, newlyAddedRecipe]);
-    }
-  }, [newlyAddedRecipe]);
-
   const filteredRecipes = recipes.filter((recipe) => {
     const matchesSearch = searchTerm
       ? recipe.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1208,8 +1201,17 @@ function MainPage() {
   };
 
   const handleAddRecipe = (recipe) => {
-    setNewlyAddedRecipe(recipe);
+    // Add the newly created recipe directly to the recipes state
+    setRecipes((prevRecipes) => [...prevRecipes, recipe]);
     closeModal();
+  };
+
+  // Helper function to strip HTML tags
+  const stripHtmlTags = (html) => {
+    if (!html) return '';
+    const tmp = document.createElement('DIV');
+    tmp.innerHTML = html;
+    return tmp.textContent || tmp.innerText || '';
   };
 
   if (loading) {
@@ -1288,30 +1290,60 @@ function MainPage() {
               )}
               <div style={{ padding: "20px" }}>
                 <h2 style={{ margin: "0 0 10px", color: "#4B2E2E", fontWeight: "700" }}>{recipe.title || "Untitled Recipe"}</h2>
+                
                 {/* Rating */}
                 <div style={{ color: "#666", fontSize: "14px", marginBottom: "10px" }}>
-                  {"⭐".repeat(Math.round(Number(recipe.rating || 0)))}{" "}
-                  {recipe.rating ? Number(recipe.rating).toFixed(1) : "N/A"}
+                  {"⭐".repeat(Math.round(Number(recipe.ratingAvg || recipe.rating || 0)))}{" "}
+                  {recipe.ratingAvg ? Number(recipe.ratingAvg).toFixed(1) : (recipe.rating ? Number(recipe.rating).toFixed(1) : "N/A")} ({recipe.ratingCount || recipe.reviews_count || 0} reviews)
                 </div>
+
                 {/* Cuisine + Dietary */}
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px", color: "#4B2E2E" }}>
                   <span>🌍 {recipe.cuisineNames?.length ? recipe.cuisineNames.join(", ") : "Unknown"}</span>
                   <span>🥗 {recipe.dietaryNames?.length ? recipe.dietaryNames.join(", ") : "Unspecified"}</span>
                 </div>
+
+                {/* Serving Size */}
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "10px", fontSize: "14px" }}>
+                  <span>🍽️ {recipe.servingSize || recipe.serving_size || "N/A"} servings</span>
+                </div>
+
                 {/* Key Ingredients */}
                 <div style={{ marginBottom: "15px" }}>
-                  <h4 style={{ marginBottom: "5px" }}>Key Ingredients:</h4>
-                  <p style={{ margin: 0, color: "#555" }}>
-                    {(recipe.ingredients || []).slice(0, 4).map((ing) => ing.name).join(", ")}
-                    {Array.isArray(recipe.ingredients) && recipe.ingredients.length > 4 && " ..."}
+                  <h4 style={{ marginBottom: "5px", fontWeight: "600", color: "#4B2E2E" }}>Key Ingredients:</h4>
+                  <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
+                    {(recipe.ingredientNames || recipe.ingredients || [])
+                      .slice(0, 4)
+                      .map((ing) => {
+                        if (typeof ing === 'string') return ing;
+                        return `${ing.quantity || ''} ${ing.measurement || ''} ${ing.name || ''}`.trim();
+                      })
+                      .join(", ")}
+                    {((recipe.ingredientNames || recipe.ingredients || []).length > 4) && " ..."}
                   </p>
                 </div>
+
                 {/* Method */}
                 <div style={{ marginBottom: "15px" }}>
                   <h4 style={{ marginBottom: "5px", fontWeight: "600", color: "#4B2E2E" }}>Method:</h4>
-                  <p style={{ margin: 0, color: "#555" }}>
-                    {(recipe.instructions || "No instructions provided.").split(" ").slice(0, 20).join(" ")}...
+                  <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
+                    {stripHtmlTags(recipe.instructions || recipe.summary || "No instructions provided.")
+                      .split(". ")
+                      .slice(0, 2)
+                      .join(". ") + (recipe.instructions || recipe.summary ? "..." : "")}
                   </p>
+                </div>
+
+                {/* Recent Comments */}
+                <div style={{ marginBottom: "15px" }}>
+                  <h4 style={{ marginBottom: "5px", fontWeight: "600", color: "#4B2E2E" }}>Recent comments:</h4>
+                  {Array.isArray(recipe.comments) && recipe.comments.length > 0 ? (
+                    <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
+                      "{recipe.comments[0]}" {recipe.comments.length > 1 && " ..."}
+                    </p>
+                  ) : (
+                    <p style={{ margin: 0, color: "#999", fontSize: "14px" }}>No comments</p>
+                  )}
                 </div>
               </div>
             </div>
