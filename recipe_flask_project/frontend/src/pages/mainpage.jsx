@@ -1165,36 +1165,81 @@ function MainPage() {
     //   }
     // };
 
+    // const fetchRecipes = async () => {
+    //   try {
+    //     const res = await fetch("http://localhost:5000/api/recipes");
+    //     const data = await res.json();
+
+    //     // Fetch ingredient objects for each recipe
+    //     const recipesWithIngredients = await Promise.all(
+    //       data.map(async (recipe) => {
+    //         if (recipe.ingredients?.length) {
+    //           const ids = recipe.ingredients.map((x) =>
+    //             typeof x === "string" ? x : x.$oid
+    //           );
+    //           const ingRes = await fetch(
+    //             "http://localhost:5000/api/ingredients/many",
+    //             {
+    //               method: "POST",
+    //               headers: { "Content-Type": "application/json" },
+    //               body: JSON.stringify({ ids }),
+    //             }
+    //           );
+    //           const ingredientsData = await ingRes.json();
+    //           return { ...recipe, ingredients: ingredientsData };
+    //         }
+    //         return recipe;
+    //       })
+    //     );
+    //     setRecipes(
+    //       Array.isArray(recipesWithIngredients) ? recipesWithIngredients : []
+    //     );
+    //   } catch (err) {
+    //     console.error("Error fetching recipes:", err);
+    //   } finally {
+    //     setLoading(false);
+    //   }
+    // };
+
     const fetchRecipes = async () => {
-  try {
-    const res = await fetch("http://localhost:5000/api/recipes");
-    const data = await res.json();
+      try {
+        const res = await fetch("http://localhost:5000/api/recipes");
+        const data = await res.json();
 
-    // Fetch ingredient objects for each recipe
-    const recipesWithIngredients = await Promise.all(
-      data.map(async (recipe) => {
-        if (recipe.ingredients?.length) {
-          const ids = recipe.ingredients.map(x => typeof x === "string" ? x : x.$oid);
-          const ingRes = await fetch("http://localhost:5000/api/ingredients/many", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ids })
-          });
-          const ingredientsData = await ingRes.json();
-          return { ...recipe, ingredients: ingredientsData };
-        }
-        return recipe;
-      })
-    );
+        // Map recipes to include dietaryNames and servingSize
+        const mappedRecipes = await Promise.all(
+          (data || []).map(async (recipe) => {
+            // 1️⃣ Fetch dietary preferences for this recipe
+            let dietaryNames = [];
+            if (recipe.dietary_ids?.length) {
+              const ids = recipe.dietary_ids.map((id) => id.$oid || id);
+              const dietaryRes = await fetch(
+                "http://localhost:5000/api/dietary-preferences/many",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ ids }),
+                }
+              );
+              if (dietaryRes.ok) dietaryNames = await dietaryRes.json();
+            }
 
-    setRecipes(Array.isArray(recipesWithIngredients) ? recipesWithIngredients : []);
-  } catch (err) {
-    console.error("Error fetching recipes:", err);
-  } finally {
-    setLoading(false);
-  }
-};
+            return {
+              ...recipe,
+              dietaryNames: dietaryNames.map((d) => d.name),
+              servingSize:
+                recipe.servings || recipe.serving_size || recipe.servings, // adjust as per API
+            };
+          })
+        );
 
+        setRecipes(mappedRecipes);
+      } catch (err) {
+        console.error("Error fetching recipes:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
 
     fetchFilters();
     fetchRecipes();
@@ -1439,213 +1484,187 @@ const modalStyles = {
 export default MainPage;
 
 // extracted code:
-        // {filteredRecipes.map((recipe, idx) => {
-        //   // // ⭐ Correctly placed debug
-        //   // console.log(
-        //   //   "Ingredients for:",
-        //   //   recipe.title,
-        //   //   recipe.ingredients,
-        //   //   recipe.ingredientNames
-        //   // );
-        //   return (
-        //     <Link
-        //       key={idx}
-        //       to={`/recipes/${encodeURIComponent(recipe.title)}`}
-        //       style={{ textDecoration: "none", color: "inherit" }}
-        //     >
-        //       <div
-        //         style={{
-        //           backgroundColor: "#fff",
-        //           borderRadius: "12px",
-        //           boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-        //           overflow: "hidden",
-        //           cursor: "pointer",
-        //         }}
-        //       >
-        //         {recipe.image && (
-        //           <img
-        //             src={recipe.image}
-        //             alt={recipe.title}
-        //             style={{
-        //               width: "100%",
-        //               height: "200px",
-        //               objectFit: "cover",
-        //             }}
-        //           />
-        //         )}
-        //         <div style={{ padding: "20px" }}>
-        //           <h2
-        //             style={{
-        //               margin: "0 0 10px",
-        //               color: "#4B2E2E",
-        //               fontWeight: "700",
-        //             }}
-        //           >
-        //             {recipe.title || "Untitled Recipe"}
-        //           </h2>
+// {filteredRecipes.map((recipe, idx) => {
+//   // // ⭐ Correctly placed debug
+//   // console.log(
+//   //   "Ingredients for:",
+//   //   recipe.title,
+//   //   recipe.ingredients,
+//   //   recipe.ingredientNames
+//   // );
+//   return (
+//     <Link
+//       key={idx}
+//       to={`/recipes/${encodeURIComponent(recipe.title)}`}
+//       style={{ textDecoration: "none", color: "inherit" }}
+//     >
+//       <div
+//         style={{
+//           backgroundColor: "#fff",
+//           borderRadius: "12px",
+//           boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+//           overflow: "hidden",
+//           cursor: "pointer",
+//         }}
+//       >
+//         {recipe.image && (
+//           <img
+//             src={recipe.image}
+//             alt={recipe.title}
+//             style={{
+//               width: "100%",
+//               height: "200px",
+//               objectFit: "cover",
+//             }}
+//           />
+//         )}
+//         <div style={{ padding: "20px" }}>
+//           <h2
+//             style={{
+//               margin: "0 0 10px",
+//               color: "#4B2E2E",
+//               fontWeight: "700",
+//             }}
+//           >
+//             {recipe.title || "Untitled Recipe"}
+//           </h2>
 
-        //           {/* Rating */}
-        //           <div
-        //             style={{
-        //               color: "#666",
-        //               fontSize: "14px",
-        //               marginBottom: "10px",
-        //             }}
-        //           >
-        //             {"⭐".repeat(
-        //               Math.round(Number(recipe.ratingAvg || recipe.rating || 0))
-        //             )}{" "}
-        //             {recipe.ratingAvg
-        //               ? Number(recipe.ratingAvg).toFixed(1)
-        //               : recipe.rating
-        //               ? Number(recipe.rating).toFixed(1)
-        //               : "N/A"}{" "}
-        //             ({recipe.ratingCount || recipe.reviews_count || 0} reviews)
-        //           </div>
+//           {/* Rating */}
+//           <div
+//             style={{
+//               color: "#666",
+//               fontSize: "14px",
+//               marginBottom: "10px",
+//             }}
+//           >
+//             {"⭐".repeat(
+//               Math.round(Number(recipe.ratingAvg || recipe.rating || 0))
+//             )}{" "}
+//             {recipe.ratingAvg
+//               ? Number(recipe.ratingAvg).toFixed(1)
+//               : recipe.rating
+//               ? Number(recipe.rating).toFixed(1)
+//               : "N/A"}{" "}
+//             ({recipe.ratingCount || recipe.reviews_count || 0} reviews)
+//           </div>
 
-        //           {/* Cuisine + Dietary */}
-        //           <div
-        //             style={{
-        //               display: "flex",
-        //               justifyContent: "space-between",
-        //               marginBottom: "10px",
-        //               fontSize: "14px",
-        //               color: "#4B2E2E",
-        //             }}
-        //           >
-        //             <span>
-        //               🌍{" "}
-        //               {recipe.cuisineNames?.length
-        //                 ? recipe.cuisineNames.join(", ")
-        //                 : "Unknown"}
-        //             </span>
-        //             <span>
-        //               🥗{" "}
-        //               {recipe.dietaryNames?.length
-        //                 ? recipe.dietaryNames.join(", ")
-        //                 : "Unspecified"}
-        //             </span>
-        //           </div>
+//           {/* Cuisine + Dietary */}
+//           <div
+//             style={{
+//               display: "flex",
+//               justifyContent: "space-between",
+//               marginBottom: "10px",
+//               fontSize: "14px",
+//               color: "#4B2E2E",
+//             }}
+//           >
+//             <span>
+//               🌍{" "}
+//               {recipe.cuisineNames?.length
+//                 ? recipe.cuisineNames.join(", ")
+//                 : "Unknown"}
+//             </span>
+//             <span>
+//               🥗{" "}
+//               {recipe.dietaryNames?.length
+//                 ? recipe.dietaryNames.join(", ")
+//                 : "Unspecified"}
+//             </span>
+//           </div>
 
-        //           {/* Serving Size */}
-        //           <div
-        //             style={{
-        //               display: "flex",
-        //               justifyContent: "space-between",
-        //               marginBottom: "10px",
-        //               fontSize: "14px",
-        //             }}
-        //           >
-        //             <span>
-        //               🍽️ {recipe.servingSize || recipe.serving_size || "N/A"}{" "}
-        //               servings
-        //             </span>
-        //           </div>
+//           {/* Serving Size */}
+//           <div
+//             style={{
+//               display: "flex",
+//               justifyContent: "space-between",
+//               marginBottom: "10px",
+//               fontSize: "14px",
+//             }}
+//           >
+//             <span>
+//               🍽️ {recipe.servingSize || recipe.serving_size || "N/A"}{" "}
+//               servings
+//             </span>
+//           </div>
 
-        //           {/* Key Ingredients */}
-        //           <div style={{ marginBottom: "15px" }}>
-        //             <h4
-        //               style={{
-        //                 marginBottom: "5px",
-        //                 fontWeight: "600",
-        //                 color: "#4B2E2E",
-        //               }}
-        //             >
-        //               Key Ingredients:
-        //             </h4>
-        //             <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
-        //               {(recipe.ingredientNames || recipe.ingredients || [])
-        //                 .slice(0, 4)
-        //                 .map((ing) => {
-        //                   if (typeof ing === "string") return ing;
-        //                   return `${ing.quantity || ""} ${
-        //                     ing.measurement || ""
-        //                   } ${ing.name || ""}`.trim();
-        //                 })
-        //                 .join(", ")}
-        //               {(recipe.ingredientNames || recipe.ingredients || [])
-        //                 .length > 4 && " ..."}
-        //             </p>
-        //           </div>
+//           {/* Key Ingredients */}
+//           <div style={{ marginBottom: "15px" }}>
+//             <h4
+//               style={{
+//                 marginBottom: "5px",
+//                 fontWeight: "600",
+//                 color: "#4B2E2E",
+//               }}
+//             >
+//               Key Ingredients:
+//             </h4>
+//             <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
+//               {(recipe.ingredientNames || recipe.ingredients || [])
+//                 .slice(0, 4)
+//                 .map((ing) => {
+//                   if (typeof ing === "string") return ing;
+//                   return `${ing.quantity || ""} ${
+//                     ing.measurement || ""
+//                   } ${ing.name || ""}`.trim();
+//                 })
+//                 .join(", ")}
+//               {(recipe.ingredientNames || recipe.ingredients || [])
+//                 .length > 4 && " ..."}
+//             </p>
+//           </div>
 
-        //           {/* Method */}
-        //           <div style={{ marginBottom: "15px" }}>
-        //             <h4
-        //               style={{
-        //                 marginBottom: "5px",
-        //                 fontWeight: "600",
-        //                 color: "#4B2E2E",
-        //               }}
-        //             >
-        //               Method:
-        //             </h4>
-        //             <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
-        //               {stripHtmlTags(
-        //                 recipe.instructions ||
-        //                   recipe.summary ||
-        //                   "No instructions provided."
-        //               )
-        //                 .split(". ")
-        //                 .slice(0, 2)
-        //                 .join(". ") +
-        //                 (recipe.instructions || recipe.summary ? "..." : "")}
-        //             </p>
-        //           </div>
+//           {/* Method */}
+//           <div style={{ marginBottom: "15px" }}>
+//             <h4
+//               style={{
+//                 marginBottom: "5px",
+//                 fontWeight: "600",
+//                 color: "#4B2E2E",
+//               }}
+//             >
+//               Method:
+//             </h4>
+//             <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
+//               {stripHtmlTags(
+//                 recipe.instructions ||
+//                   recipe.summary ||
+//                   "No instructions provided."
+//               )
+//                 .split(". ")
+//                 .slice(0, 2)
+//                 .join(". ") +
+//                 (recipe.instructions || recipe.summary ? "..." : "")}
+//             </p>
+//           </div>
 
-        //           {/* Recent Comments */}
-        //           <div style={{ marginBottom: "15px" }}>
-        //             <h4
-        //               style={{
-        //                 marginBottom: "5px",
-        //                 fontWeight: "600",
-        //                 color: "#4B2E2E",
-        //               }}
-        //             >
-        //               Recent comments:
-        //             </h4>
-        //             {Array.isArray(recipe.comments) &&
-        //             recipe.comments.length > 0 ? (
-        //               <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
-        //                 "{recipe.comments[0]}"{" "}
-        //                 {recipe.comments.length > 1 && " ..."}
-        //               </p>
-        //             ) : (
-        //               <p style={{ margin: 0, color: "#999", fontSize: "14px" }}>
-        //                 No comments
-        //               </p>
-        //             )}
-        //           </div>
-        //         </div>
-        //       </div>
-        //     </Link>
-        //   );
-        // })}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+//           {/* Recent Comments */}
+//           <div style={{ marginBottom: "15px" }}>
+//             <h4
+//               style={{
+//                 marginBottom: "5px",
+//                 fontWeight: "600",
+//                 color: "#4B2E2E",
+//               }}
+//             >
+//               Recent comments:
+//             </h4>
+//             {Array.isArray(recipe.comments) &&
+//             recipe.comments.length > 0 ? (
+//               <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
+//                 "{recipe.comments[0]}"{" "}
+//                 {recipe.comments.length > 1 && " ..."}
+//               </p>
+//             ) : (
+//               <p style={{ margin: 0, color: "#999", fontSize: "14px" }}>
+//                 No comments
+//               </p>
+//             )}
+//           </div>
+//         </div>
+//       </div>
+//     </Link>
+//   );
+// })}
 
 // // src/pages/mainpage.jsx
 // import React, { useState, useEffect } from "react";
