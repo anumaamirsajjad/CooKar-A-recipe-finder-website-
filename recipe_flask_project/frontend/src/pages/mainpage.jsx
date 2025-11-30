@@ -1173,6 +1173,24 @@ function MainPage() {
     //     // Fetch ingredient objects for each recipe
     //     const recipesWithIngredients = await Promise.all(
     //       data.map(async (recipe) => {
+    //         let dietaryNames = [];
+    //         // ✅ Fetch dietary preferences for this recipe
+    //         if (recipe.dietary_ids?.length) {
+    //           const ids = recipe.dietary_ids.map((id) => id.$oid || id);
+    //           const dietaryRes = await fetch(
+    //             "http://localhost:5000/api/dietary-preferences/many",
+    //             {
+    //               method: "POST",
+    //               headers: { "Content-Type": "application/json" },
+    //               body: JSON.stringify({ ids }),
+    //             }
+    //           );
+    //           if (dietaryRes.ok) dietaryNames = await dietaryRes.json();
+    //         }
+
+    //                 // Fetch ingredient objects
+    //     let ingredientsData = recipe.ingredients || [];
+
     //         if (recipe.ingredients?.length) {
     //           const ids = recipe.ingredients.map((x) =>
     //             typeof x === "string" ? x : x.$oid
@@ -1185,12 +1203,34 @@ function MainPage() {
     //               body: JSON.stringify({ ids }),
     //             }
     //           );
-    //           const ingredientsData = await ingRes.json();
-    //           return { ...recipe, ingredients: ingredientsData };
-    //         }
-    //         return recipe;
-    //       })
+    //           if (ingRes.ok) ingredientsData = await ingRes.json();
+    //     }
+
+    //           // 1️⃣ Fetch dietary preferences for this recipe
+    //           // let dietaryNames = [];
+    //           // if (recipe.dietary_ids?.length) {
+    //           //   const ids = recipe.dietary_ids.map((id) => id.$oid || id);
+    //           //   const dietaryRes = await fetch(
+    //           //     "http://localhost:5000/api/dietary-preferences/many",
+    //           //     {
+    //           //       method: "POST",
+    //           //       headers: { "Content-Type": "application/json" },
+    //           //       body: JSON.stringify({ ids }),
+    //           //     }
+    //           //   );
+    //           //   if (dietaryRes.ok) dietaryNames = await dietaryRes.json();
+    //           // }
+
+    //           return {
+    //             ...recipe,
+    //             ingredients: ingredientsData,
+    //             dietaryNames: dietaryNames.map((d) => d.name),
+    //             servingSize:
+    //               recipe.servings || recipe.serving_size || recipe.servings, // adjust as per API
+    //           };
+    //                   })
     //     );
+
     //     setRecipes(
     //       Array.isArray(recipesWithIngredients) ? recipesWithIngredients : []
     //     );
@@ -1206,13 +1246,29 @@ function MainPage() {
         const res = await fetch("http://localhost:5000/api/recipes");
         const data = await res.json();
 
-        // Map recipes to include dietaryNames and servingSize
-        const mappedRecipes = await Promise.all(
-          (data || []).map(async (recipe) => {
-            // 1️⃣ Fetch dietary preferences for this recipe
+        const recipesWithIngredientsAndDietary = await Promise.all(
+          data.map(async (recipe) => {
+            // 1️⃣ Fetch ingredients
+            let ingredientsData = recipe.ingredients || [];
+            if (recipe.ingredients?.length) {
+              const ids = recipe.ingredients.map((x) =>
+                typeof x === "string" ? x : x.$oid
+              );
+              const ingRes = await fetch(
+                "http://localhost:5000/api/ingredients/many",
+                {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ ids }),
+                }
+              );
+              if (ingRes.ok) ingredientsData = await ingRes.json();
+            }
+
+            // 2️⃣ Fetch dietary preferences
             let dietaryNames = [];
-            if (recipe.dietary_ids?.length) {
-              const ids = recipe.dietary_ids.map((id) => id.$oid || id);
+            if (recipe.diet_ids?.length) {
+              const ids = recipe.diet_ids.map((id) => id.$oid || id);
               const dietaryRes = await fetch(
                 "http://localhost:5000/api/dietary-preferences/many",
                 {
@@ -1221,19 +1277,47 @@ function MainPage() {
                   body: JSON.stringify({ ids }),
                 }
               );
-              if (dietaryRes.ok) dietaryNames = await dietaryRes.json();
+
+              ////////////////////////////////////////////////////////////////////////////////////////////////
+              if (dietaryRes.ok) {
+                const dietaryData = await dietaryRes.json();
+                console.log(
+                  "Dietary data for recipe",
+                  recipe.title,
+                  dietaryData
+                ); // <-- check this
+                if (Array.isArray(dietaryData)) {
+                  dietaryNames = dietaryData.map((d) => d.name);
+                  console.log("Mapped dietaryNames:", dietaryNames); // <-- check this
+                }
+              }
+              ////////////////////////////////////////////////////////////////////////////////////////////////
+
+              // if (dietaryRes.ok) {
+              //   const dietaryData = await dietaryRes.json();
+              //   if (Array.isArray(dietaryData)) {
+              //     dietaryNames = dietaryData.map((d) => d.name);
+              //   }
+              // }
             }
 
+            console.log("FINAL RECIPE:", {
+              title: recipe.title,
+              diet_ids: recipe.diet_ids,
+              dietaryNames,
+            });
+            
             return {
               ...recipe,
-              dietaryNames: dietaryNames.map((d) => d.name),
+              ingredients: ingredientsData,
+              dietaryNames, // ✅ now correctly populated
               servingSize:
-                recipe.servings || recipe.serving_size || recipe.servings, // adjust as per API
+                recipe.servings || recipe.serving_size || recipe.servings,
             };
           })
         );
 
-        setRecipes(mappedRecipes);
+        setRecipes(recipesWithIngredientsAndDietary);
       } catch (err) {
         console.error("Error fetching recipes:", err);
       } finally {
