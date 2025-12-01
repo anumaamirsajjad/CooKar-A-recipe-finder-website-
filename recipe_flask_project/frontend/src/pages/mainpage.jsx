@@ -1536,7 +1536,7 @@ function MainPage() {
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             style={{
-              width: "96%",
+              width: "97%",
               padding: "14px 18px",
               fontSize: "16px",
               borderRadius: "8px",

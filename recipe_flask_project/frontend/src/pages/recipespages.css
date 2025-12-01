@@ -2,8 +2,7 @@
    GLOBAL PAGE CONTAINER
 ============================ */
 .recipe-page {
-  max-width: 1200px;
-  margin: 0 auto;
+  max-width: 100%;
   padding: 25px;
   font-family: "Inter", sans-serif;
   color: #333;
@@ -12,12 +11,12 @@
 /* ============================
    HEADER SECTION
 ============================ */
-.top-header {
+/* .top-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 25px;
-}
+} */
 
 .top-header h1 {
   font-size: 28px;
@@ -25,7 +24,7 @@
   color: #222;
 }
 
-.back-btn {
+/* .back-btn {
   font-size: 16px;
   text-decoration: none;
   color: #3478F6;
@@ -34,6 +33,30 @@
 
 .back-btn:hover {
   text-decoration: underline;
+} */
+
+.back-btn-block{
+  margin: 20px 10px;
+}
+
+.back-btn {
+  display: inline-block;      /* makes padding and background work nicely */
+  font-size: 16px;
+  font-weight: 500;
+  text-decoration: none;
+  color: #222;
+  padding: 10px 16px;          /* space inside the box */
+  border-radius: 8px;         /* rounded corners */
+  background-color: #fff;  /* light blue background */
+  transition: background-color 0.3s, color 0.3s; /* smooth hover */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); /* subtle shadow */
+}
+
+.back-btn:hover {
+  background-color: #a1a1a167;  /* darker shade on hover */
+  color: #333;             /* optional: darker text on hover */
+  text-decoration: none;       /* remove underline on hover */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0); /* subtle shadow */
 }
 
 /* ============================
@@ -49,7 +72,7 @@
   height: 420px;
   object-fit: cover;
   border-radius: 15px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.015);
 }
 
 /* ============================
@@ -98,6 +121,25 @@
   font-size: 13px;
   font-weight: 600;
 }
+
+/* ============================
+   RECIPE TITLE BOX
+============================ */
+.recipe-title-box {
+  background: #fff;
+  padding: 10px 10px 20px 25px; /*top right bottom left*/ 
+  border-radius: 12px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+  margin-bottom: 5px;
+}
+
+.recipe-title-box h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #222;
+  margin: 0;
+}
+
 
 /* ============================
    STATS GRID
@@ -227,7 +269,7 @@
 }
 
 .ing-name {
-  color: #2463EB;
+  color: #000000;
   font-weight: 600;
 }
 
@@ -272,7 +314,7 @@
 
 .reviews-section input,
 .reviews-section textarea {
-  width: 100%;
+  width: 97%;
   padding: 12px;
   background: #f7f7f7;
   border: none;
