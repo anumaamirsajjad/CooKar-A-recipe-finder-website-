@@ -254,7 +254,7 @@ def enrich_recipe(recipe, db):
     """Attach cuisine, dietary, ingredients, comments, ratings to recipe."""
     ingredients_collection = db["Ingredients"]
     cuisine_collection = db["Cuisine"]
-    diet_collection = db["Dietary"]
+    diet_collection = db["DietaryPreference"]
     comments_collection = db["Comments"]
     ratings_collection = db["Ratings"]
 

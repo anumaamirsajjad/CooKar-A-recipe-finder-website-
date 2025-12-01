@@ -14,6 +14,8 @@ from rating_routes import rating_routes
 
 app = Flask(__name__)
 
+CORS(app, resources={r"/*": {"origins": "*"}})
+
 # Apply CORS to blueprint BEFORE registration
 CORS(comment_routes, resources={r"/*": {"origins": "*"}})
 CORS(rating_routes, resources={r"/*": {"origins": "*"}})
