@@ -1445,7 +1445,8 @@ function MainPage() {
       {/* Search + Filters */}
       <div
         style={{
-          maxWidth: "100%",
+          maxWidth: "80%",
+          borderRadius: "12px",
           backgroundColor: "#fff",
           padding: "30px",
           boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
@@ -1523,6 +1524,7 @@ function MainPage() {
           gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
           gap: "30px",
           padding: "20px",
+          alignItems: "stretch",
         }}
       >
         {filteredRecipes.map((recipe, idx) => (

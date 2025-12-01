@@ -306,11 +306,16 @@ const RecipeCard = ({ recipe }) => {
     >
       <div
         style={{
+          display: "flex",
+          flexDirection: "column", // stack content vertically
+          justifyContent: "space-between", // push bottom content down if needed
+          height: "100%", // take full height of the grid cell
           backgroundColor: "#fff",
           borderRadius: "12px",
           boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
           overflow: "hidden",
           cursor: "pointer",
+          font: "Poppins",
         }}
       >
         {recipe.image && (
@@ -322,7 +327,7 @@ const RecipeCard = ({ recipe }) => {
         )}
 
         <div style={{ padding: "20px" }}>
-          <h2 style={{ margin: "0 0 10px", color: "#4B2E2E", fontWeight: "700" }}>
+          <h2 style={{margin: "0 0 10px", color: "#4B2E2E", fontWeight: "700" }}>
             {recipe.title || "Untitled Recipe"}
           </h2>
 
