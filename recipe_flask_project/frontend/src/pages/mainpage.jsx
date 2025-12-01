@@ -1306,7 +1306,7 @@ function MainPage() {
               diet_ids: recipe.diet_ids,
               dietaryNames,
             });
-            
+
             return {
               ...recipe,
               ingredients: ingredientsData,
@@ -1443,7 +1443,7 @@ function MainPage() {
       )}
 
       {/* Search + Filters */}
-      <div
+      {/* <div
         style={{
           maxWidth: "80%",
           borderRadius: "12px",
@@ -1500,6 +1500,86 @@ function MainPage() {
             onChange={(e) => setSelectedCuisine(e.target.value)}
             style={{
               flex: "1 1 300px",
+              padding: "12px 16px",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              fontSize: "16px",
+              backgroundColor: "#fff",
+            }}
+          >
+            <option value="">All Cuisines</option>
+            {cuisines.map((cuisine, idx) => (
+              <option key={idx} value={cuisine.name}>
+                {cuisine.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div> */}
+
+      {/* Search + Filters */}
+      <div
+        style={{
+          maxWidth: "80%",
+          borderRadius: "12px",
+          backgroundColor: "#fff",
+          padding: "30px",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          margin: "20px auto",
+        }}
+      >
+        {/* Search Box - full width */}
+        <div style={{ marginBottom: "20px" }}>
+          <input
+            type="text"
+            placeholder="Search recipes by name or ingredient..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: "96%",
+              padding: "14px 18px",
+              fontSize: "16px",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              backgroundColor: "#fff",
+            }}
+          />
+        </div>
+
+        {/* Filters row */}
+        <div
+          style={{
+            display: "flex",
+            gap: "16px",
+            flexWrap: "wrap",
+            justifyContent: "space-between",
+          }}
+        >
+          <select
+            value={selectedDietary}
+            onChange={(e) => setSelectedDietary(e.target.value)}
+            style={{
+              flex: "1 1 48%", // half width with some gap
+              padding: "12px 16px",
+              borderRadius: "8px",
+              border: "1px solid #ccc",
+              fontSize: "16px",
+              backgroundColor: "#fff",
+            }}
+          >
+            <option value="">All Preferences</option>
+            {dietaryPrefs.map((diet, idx) => (
+              <option key={idx} value={diet.name}>
+                {diet.name}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={selectedCuisine}
+            onChange={(e) => setSelectedCuisine(e.target.value)}
+            style={{
+              flex: "1 1 48%", // half width with some gap
               padding: "12px 16px",
               borderRadius: "8px",
               border: "1px solid #ccc",
