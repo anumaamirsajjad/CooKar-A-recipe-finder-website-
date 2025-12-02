@@ -62,7 +62,6 @@
 
 // export default RecipeCard;
 
-
 // // src/components/RecipeCard.jsx
 // import React from 'react';
 // import { Link } from 'react-router-dom';
@@ -117,7 +116,6 @@
 // };
 
 // export default RecipeCard;
-
 
 // // src/components/RecipeCard.jsx
 // import React from "react";
@@ -273,13 +271,11 @@
 
 // export default RecipeCard;
 
-
 // src/components/RecipeCard.jsx
 import React from "react";
 import { Link } from "react-router-dom";
 
 const RecipeCard = ({ recipe }) => {
-
   console.log("Recipe object:", recipe); // Debug
 
   // Helper to strip HTML tags
@@ -290,13 +286,30 @@ const RecipeCard = ({ recipe }) => {
     return tmp.textContent || tmp.innerText || "";
   };
 
+  // LIMIT text by words
+  const shortenText = (text, limit = 20) => {
+    if (!text) return "";
+    const words = text.split(" ");
+    return words.length > limit
+      ? words.slice(0, limit).join(" ") + "..."
+      : text;
+  };
+
+  {
+    shortenText(stripHtmlTags(recipe.instructions || recipe.summary), 25);
+  }
+
   // Helper to render ingredients as string
   const renderKeyIngredients = () => {
     if (!recipe.ingredients || recipe.ingredients.length === 0) return "N/A";
-    return recipe.ingredients
-      .slice(0, 4)
-      .map((ing) => `${ing.name} ${ing.quantity ? `- ${ing.quantity}` : ""}`.trim())
-      .join(", ") + (recipe.ingredients.length > 4 ? " ..." : "");
+    return (
+      recipe.ingredients
+        .slice(0, 4)
+        .map((ing) =>
+          `${ing.name} ${ing.quantity ? `- ${ing.quantity}` : ""}`.trim()
+        )
+        .join(", ") + (recipe.ingredients.length > 4 ? " ..." : "")
+    );
   };
 
   return (
@@ -306,86 +319,130 @@ const RecipeCard = ({ recipe }) => {
     >
       <div
         style={{
-          display: "flex",
-          flexDirection: "column", // stack content vertically
-          justifyContent: "space-between", // push bottom content down if needed
-          height: "100%", // take full height of the grid cell
-          backgroundColor: "#fff",
-          borderRadius: "12px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          overflow: "hidden",
-          cursor: "pointer",
-          font: "Poppins",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))",
+          gap: "20px",
+          gridAutoRows: "1fr", // THIS FIXES GRID CELL HEIGHT
         }}
       >
-        {recipe.image && (
-          <img
-            src={recipe.image || "/placeholder.jpg"}
-            alt={recipe.title}
-            style={{ width: "100%", height: "200px", objectFit: "cover" }}
-          />
-        )}
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column", // stack content vertically
+            justifyContent: "space-between", // push bottom content down if needed
+            height: "600px", // take full height of the grid cell
+            backgroundColor: "#fff",
+            borderRadius: "12px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+            overflow: "hidden",
+            cursor: "pointer",
+            font: "Poppins",
+          }}
+        >
+          {recipe.image && (
+            <img
+              src={recipe.image || "/placeholder.jpg"}
+              alt={recipe.title}
+              style={{
+                width: "100%",
+                height: "200px",
+                objectFit: "cover",
+              }}
+            />
+          )}
 
-        <div style={{ padding: "20px" }}>
-          <h2 style={{margin: "0 0 10px", color: "#4B2E2E", fontWeight: "700" }}>
-            {recipe.title || "Untitled Recipe"}
-          </h2>
+          <div style={{ padding: "20px" }}>
+            <h2
+              style={{
+                margin: "0 0 6px",
+                color: "#4B2E2E",
+                fontWeight: "600",
+              }}
+            >
+              {recipe.title || "Untitled Recipe"}
+            </h2>
 
-          {/* Rating */}
-          <div style={{ color: "#666", fontSize: "14px", marginBottom: "10px" }}>
-            {"⭐".repeat(Math.round(Number(recipe.ratingAvg || recipe.rating || 0)))}{" "}
-            {recipe.ratingAvg
-              ? Number(recipe.ratingAvg).toFixed(1)
-              : recipe.rating
-              ? Number(recipe.rating).toFixed(1)
-              : "N/A"}{" "}
-            ({recipe.ratingCount || recipe.reviews_count || 0} reviews)
-          </div>
+            {/* Rating */}
+            <div
+              style={{
+                color: "#666",
+                fontSize: "14px",
+                marginBottom: "8px",
+              }}
+            >
+              {"⭐".repeat(
+                Math.round(Number(recipe.ratingAvg || recipe.rating || 0))
+              )}{" "}
+              {recipe.ratingAvg
+                ? Number(recipe.ratingAvg).toFixed(1)
+                : recipe.rating
+                ? Number(recipe.rating).toFixed(1)
+                : "N/A"}{" "}
+              ({recipe.ratingCount || recipe.reviews_count || 0} reviews)
+            </div>
 
-          {/* Cuisine + Dietary */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: "10px",
-              fontSize: "14px",
-              color: "#4B2E2E",
-            }}
-          >
-            <span>
-              🌍 {recipe.cuisineNames?.length ? recipe.cuisineNames.join(", ") : "Unknown"}
-            </span>
-            <span>
-              🥗 {recipe.dietaryNames?.length ? recipe.dietaryNames.join(", ") : "Unspecified"}
-            </span>
-          </div>
+            {/* Cuisine + Dietary */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+                fontSize: "14px",
+                color: "#4B2E2E",
+              }}
+            >
+              <span>
+                🌍{" "}
+                {recipe.cuisineNames?.length
+                  ? recipe.cuisineNames.join(", ")
+                  : "Unknown"}
+              </span>
+              <span>
+                🥗{" "}
+                {recipe.dietaryNames?.length
+                  ? shortenText(recipe.dietaryNames.join(", "), 2)
+                  : "Unspecified"}
+              </span>
+            </div>
 
-          {/* Serving Size */}
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "space-between",
-              marginBottom: "10px",
-              fontSize: "14px",
-            }}
-          >
-            <span>
-              🍽️ {recipe.servingSize || recipe.serving_size || "N/A"} servings
-            </span>
-          </div>
+            {/* Serving Size */}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                marginBottom: "8px",
+                fontSize: "14px",
+              }}
+            >
+              <span>
+                🍽️ {recipe.servingSize || recipe.serving_size || "N/A"} servings
+              </span>
+            </div>
 
-          {/* Key Ingredients */}
-          <div style={{ marginBottom: "15px" }}>
-            <h4 style={{ marginBottom: "5px", fontWeight: "600", color: "#4B2E2E" }}>
-              Key Ingredients:
-            </h4>
-            <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
-              {renderKeyIngredients()}
-            </p>
-          </div>
+            {/* Key Ingredients */}
+            <div style={{ marginBottom: "8px" }}>
+              <h4
+                style={{
+                  marginBottom: "5px",
+                  fontWeight: "600",
+                  color: "#4B2E2E",
+                }}
+              >
+                Key Ingredients:
+              </h4>
+              <p
+                style={{
+                  margin: 0,
+                  color: "#555",
+                  fontSize: "14px",
+                }}
+              >
+                {shortenText(renderKeyIngredients(), 12)}
+              </p>
+            </div>
 
-          {/* Ingredients list */}
-          {/* {recipe.ingredients && recipe.ingredients.length > 0 && (
+            {/* Ingredients list */}
+            {/* {recipe.ingredients && recipe.ingredients.length > 0 && (
             <div style={{ textAlign: "left", marginBottom: "15px" }}>
               <h4 style={{ marginBottom: "5px", fontWeight: "600", color: "#4B2E2E" }}>
                 Ingredients:
@@ -400,32 +457,58 @@ const RecipeCard = ({ recipe }) => {
             </div>
           )} */}
 
-          {/* Method */}
-          <div style={{ marginBottom: "15px" }}>
-            <h4 style={{ marginBottom: "5px", fontWeight: "600", color: "#4B2E2E" }}>
-              Method:
-            </h4>
-            <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
-              {stripHtmlTags(recipe.instructions || recipe.summary || "No instructions provided.")
-                .split(". ")
-                .slice(0, 2)
-                .join(". ") +
-                (recipe.instructions || recipe.summary ? "..." : "")}
-            </p>
-          </div>
-
-          {/* Recent Comments */}
-          <div style={{ marginBottom: "15px" }}>
-            <h4 style={{ marginBottom: "5px", fontWeight: "600", color: "#4B2E2E" }}>
-              Recent comments:
-            </h4>
-            {Array.isArray(recipe.comments) && recipe.comments.length > 0 ? (
-              <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
-                "{recipe.comments[0]}" {recipe.comments.length > 1 && " ..."}
+            {/* Method */}
+            <div style={{ marginBottom: "0px" }}>
+              <h4
+                style={{
+                  marginBottom: "2px",
+                  fontWeight: "600",
+                  color: "#4B2E2E",
+                }}
+              >
+                Method:
+              </h4>
+              <p
+                style={{
+                  margin: 0,
+                  color: "#555",
+                  fontSize: "14px",
+                }}
+              >
+                {stripHtmlTags(
+                  recipe.instructions ||
+                    recipe.summary ||
+                    "No instructions provided."
+                )
+                  .split(". ")
+                  .slice(0, 2)
+                  .join(". ") +
+                  (recipe.instructions || recipe.summary ? "..." : "")}
               </p>
-            ) : (
-              <p style={{ margin: 0, color: "#999", fontSize: "14px" }}>No comments</p>
-            )}
+            </div>
+
+            {/* Recent Comments */}
+            <div style={{ marginBottom: "0px" }}>
+              <h4
+                style={{
+                  marginBottom: "5px",
+                  fontWeight: "600",
+                  color: "#4B2E2E",
+                }}
+              >
+                Recent comments:
+              </h4>
+              {Array.isArray(recipe.comments) && recipe.comments.length > 0 ? (
+                <p style={{ margin: 0, color: "#555", fontSize: "14px" }}>
+                  {/* "{recipe.comments[0]}" {recipe.comments.length > 1 && " ..."} */}
+                  {shortenText(recipe.comments[0], 15)}
+                </p>
+              ) : (
+                <p style={{ margin: 0, color: "#999", fontSize: "14px" }}>
+                  No comments
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>

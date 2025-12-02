@@ -1164,12 +1164,12 @@ function MainPage() {
     //     setLoading(false);
     //   }
     // };
-
+    //
     // const fetchRecipes = async () => {
     //   try {
     //     const res = await fetch("http://localhost:5000/api/recipes");
     //     const data = await res.json();
-
+    //
     //     // Fetch ingredient objects for each recipe
     //     const recipesWithIngredients = await Promise.all(
     //       data.map(async (recipe) => {
@@ -1187,10 +1187,10 @@ function MainPage() {
     //           );
     //           if (dietaryRes.ok) dietaryNames = await dietaryRes.json();
     //         }
-
+    //
     //                 // Fetch ingredient objects
     //     let ingredientsData = recipe.ingredients || [];
-
+    //
     //         if (recipe.ingredients?.length) {
     //           const ids = recipe.ingredients.map((x) =>
     //             typeof x === "string" ? x : x.$oid
@@ -1205,7 +1205,7 @@ function MainPage() {
     //           );
     //           if (ingRes.ok) ingredientsData = await ingRes.json();
     //     }
-
+    //
     //           // 1️⃣ Fetch dietary preferences for this recipe
     //           // let dietaryNames = [];
     //           // if (recipe.dietary_ids?.length) {
@@ -1220,7 +1220,7 @@ function MainPage() {
     //           //   );
     //           //   if (dietaryRes.ok) dietaryNames = await dietaryRes.json();
     //           // }
-
+    //
     //           return {
     //             ...recipe,
     //             ingredients: ingredientsData,
@@ -1230,7 +1230,7 @@ function MainPage() {
     //           };
     //                   })
     //     );
-
+    //
     //     setRecipes(
     //       Array.isArray(recipesWithIngredients) ? recipesWithIngredients : []
     //     );
@@ -1407,7 +1407,7 @@ function MainPage() {
               margin: 0,
             }}
           >
-            Cookar
+            CooKar
           </h1>
         </div>
         <button
@@ -1603,7 +1603,7 @@ function MainPage() {
           display: "grid",
           gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
           gap: "30px",
-          padding: "20px",
+          padding: "20px 100px",
           alignItems: "stretch",
         }}
       >
