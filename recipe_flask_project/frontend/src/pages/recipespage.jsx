@@ -281,104 +281,28 @@ const RecipeFinder = () => {
         setLoading(true);
         const recipeTitle = getRecipeTitleFromUrl();
 
-        // 1) Fetch recipe
+        // Fetch recipe (backend already enriches it with all data)
         const recipeResponse = await fetch(
           `http://localhost:5000/api/recipes/${encodeURIComponent(recipeTitle)}`
         );
         if (!recipeResponse.ok) throw new Error("Failed to fetch recipe");
         const recipeData = await recipeResponse.json();
 
-        let ratingData = { rating: 0, reviews_count: 0 };
-        const rawId = recipeData._id;
-        const recipeId =
-          typeof rawId === "string" ? rawId : rawId?.$oid ? rawId.$oid : null;
+        setRecipe(recipeData);
 
-        if (recipeId) {
-          const ratingResponse = await fetch(
-            `http://localhost:5000/api/ratings/${recipeId}`
-          );
-          if (ratingResponse.ok) ratingData = await ratingResponse.json();
+        // Extract cuisines if available
+        if (recipeData.cuisineNames?.length) {
+          setCuisines(recipeData.cuisineNames.map(name => ({ name })));
         }
 
-        // 2) Fetch comments count
-        let commentsData = { comments_count: 0 };
-        if (recipeId) {
-          const commentsResponse = await fetch(
-            `http://localhost:5000/api/comments/count/${recipeId}`
-          );
-          if (commentsResponse.ok) commentsData = await commentsResponse.json();
+        // Extract dietary preferences if available
+        if (recipeData.dietaryNames?.length) {
+          setDietaryPrefs(recipeData.dietaryNames.map(name => ({ name })));
         }
 
-        const fullRecipe = {
-          ...recipeData,
-          rating: ratingData.rating || 0,
-          reviews_count: ratingData.reviews_count || 0,
-          comments_count: commentsData.comments_count || 0,
-        };
-
-        setRecipe(fullRecipe);
-
-        // 3) Fetch cuisines
-        if (recipeData.cuisine_ids?.length) {
-          const cuisineIds = recipeData.cuisine_ids.map((x) =>
-            x.$oid ? x.$oid : x
-          );
-
-          const cuisinesResponse = await fetch(
-            "http://localhost:5000/api/cuisines/many",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ids: cuisineIds }),
-            }
-          );
-
-          if (cuisinesResponse.ok) {
-            const cuisinesData = await cuisinesResponse.json();
-            setCuisines(cuisinesData);
-          }
-        }
-
-        // 3b) Fetch dietary preferences ✅
-        if (recipeData.dietary_ids?.length) {
-          const dietaryIds = recipeData.dietary_ids.map((x) =>
-            x.$oid ? x.$oid : x
-          );
-
-          const dietaryResponse = await fetch(
-            "http://localhost:5000/api/dietary-preferences/many",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ids: dietaryIds }),
-            }
-          );
-
-          if (dietaryResponse.ok) {
-            const dietaryData = await dietaryResponse.json();
-            setDietaryPrefs(dietaryData);
-          }
-        }
-
-        // 4) Fetch ingredients
+        // Use ingredients directly if they're already objects with name/quantity
         if (recipeData.ingredients?.length) {
-          const ids = recipeData.ingredients.map((x) =>
-            typeof x === "string" ? x : x.$oid
-          );
-
-          const ingredientsResponse = await fetch(
-            "http://localhost:5000/api/ingredients/many",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ids }),
-            }
-          );
-
-          if (ingredientsResponse.ok) {
-            const ingredientsData = await ingredientsResponse.json();
-            setIngredients(ingredientsData);
-          }
+          setIngredients(recipeData.ingredients);
         }
       } catch (err) {
         setError(err.message);
@@ -472,7 +396,7 @@ const RecipeFinder = () => {
             {/* Stats */}
             <div className="stats-grid">
               <div className="stat-box">
-                <h4>{recipe.servings || "-"}</h4>
+                <h4>{recipe.servingSize || recipe.servings || "-"}</h4>
                 <p>Servings</p>
               </div>
 
@@ -482,12 +406,12 @@ const RecipeFinder = () => {
               </div>
 
               <div className="stat-box">
-                <h4>{recipe.rating.toFixed(1)}</h4>
+                <h4>{(recipe.ratingAvg || recipe.rating || 0).toFixed(1)}</h4>
                 <p>Rating</p>
               </div>
 
               <div className="stat-box">
-                <h4>{recipe.comments_count}</h4>
+                <h4>{recipe.ratingCount || recipe.comments_count || 0}</h4>
                 <p>Reviews</p>
               </div>
             </div>
