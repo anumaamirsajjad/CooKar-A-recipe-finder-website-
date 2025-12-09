@@ -406,7 +406,7 @@ const RecipeFinder = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "20px 40px",
+          padding: "10px 40px",
           backgroundColor: "#fff",
           boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
         }}
@@ -419,16 +419,7 @@ const RecipeFinder = () => {
             style={{ width: "50px", marginRight: "10px" }}
           />
 
-          <h1
-            style={{
-              fontSize: "36px",
-              fontWeight: "bold",
-              color: "#4B2E2E",
-              margin: 0,
-            }}
-          >
-            CooKar
-          </h1>
+          <h1>CooKar</h1>
         </div>
       </header>
 
@@ -437,7 +428,7 @@ const RecipeFinder = () => {
           ← Back to Recipes
         </a>
       </div> */}
-      <div style={{ margin: "0px 125px" }}>
+      <div style={{margin:"0px 125px"}}>
         <div className="back-btn-block">
           <a href="/recipes" className="back-btn">
             ← Back to Recipes
