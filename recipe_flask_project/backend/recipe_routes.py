@@ -350,8 +350,9 @@ def get_recipes():
     recipe_collection = db["Recipe"]
 
     recipes = list(recipe_collection.find({}))
-    # Don't enrich - recipes already have cuisineNames, dietaryNames, ingredients embedded
-    return Response(dumps(recipes), mimetype="application/json")
+    enriched = [enrich_recipe(r, db) for r in recipes if r]
+
+    return Response(dumps(enriched), mimetype="application/json")
 
 
 @recipe_routes.route("/recipes", methods=["POST"])
