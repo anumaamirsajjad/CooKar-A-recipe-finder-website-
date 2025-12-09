@@ -236,11 +236,6 @@ const RecipeFinder = () => {
               </div>
 
               <div className="stat-box">
-                <h4>{recipe.calories || 0}</h4>
-                <p>Calories</p>
-              </div>
-
-              <div className="stat-box">
                 <h4>{recipe.rating.toFixed(1)}</h4>
                 <p>Rating</p>
               </div>
