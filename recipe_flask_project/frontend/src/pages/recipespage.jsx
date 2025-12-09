@@ -1,254 +1,9 @@
-// // RecipeFinder.jsx (Redesigned Layout)
-// import React, { useState, useEffect } from 'react';
-// import './recipespages.css';
-// import RecipeReviews from './RecipeReviews';
-
-// const RecipeFinder = () => {
-//   const [recipe, setRecipe] = useState(null);
-//   const [ingredients, setIngredients] = useState([]);
-//   const [loading, setLoading] = useState(true);
-//   const [error, setError] = useState(null);
-//   const [cuisines, setCuisines] = useState([]);
-
-//   // Extract title from URL
-//   const getRecipeTitleFromUrl = () => {
-//     const parts = window.location.pathname.split('/');
-//     return decodeURIComponent(parts[parts.length - 1]) || 'Spicy Black-Eyed Pea Curry with Swiss Chard and Roasted Eggplant';
-//   };
-
-//   useEffect(() => {
-//     const fetchRecipeData = async () => {
-//       try {
-//         setLoading(true);
-//         const recipeTitle = getRecipeTitleFromUrl();
-
-//         // 1) Fetch recipe
-//         const recipeResponse = await fetch(
-//           `http://localhost:5000/api/recipes/${encodeURIComponent(recipeTitle)}`
-//         );
-//         if (!recipeResponse.ok) throw new Error("Failed to fetch recipe");
-//         const recipeData = await recipeResponse.json();
-
-//         let ratingData = { rating: 0, reviews_count: 0 };
-//         const rawId = recipeData._id;
-//         const recipeId =
-//           typeof rawId === "string" ? rawId : rawId?.$oid ? rawId.$oid : null;
-
-//         if (recipeId) {
-//           const ratingResponse = await fetch(
-//             `http://localhost:5000/api/ratings/${recipeId}`
-//           );
-//           if (ratingResponse.ok) ratingData = await ratingResponse.json();
-//         }
-
-//         // 2) Fetch comments count
-//         let commentsData = { comments_count: 0 };
-//         if (recipeId) {
-//           const commentsResponse = await fetch(
-//             `http://localhost:5000/api/comments/count/${recipeId}`
-//           );
-//           if (commentsResponse.ok) commentsData = await commentsResponse.json();
-//         }
-
-//         const fullRecipe = {
-//           ...recipeData,
-//           rating: ratingData.rating || 0,
-//           reviews_count: ratingData.reviews_count || 0,
-//           comments_count: commentsData.comments_count || 0
-//         };
-
-//         setRecipe(fullRecipe);
-// //copy this for dietary preference
-//         // 3) Fetch cuisines
-//         if (recipeData.cuisine_ids?.length) {
-//           const cuisineIds = recipeData.cuisine_ids.map(x =>
-//             x.$oid ? x.$oid : x
-//           );
-
-//           const cuisinesResponse = await fetch(
-//             "http://localhost:5000/api/cuisines/many",
-//             {
-//               method: "POST",
-//               headers: { "Content-Type": "application/json" },
-//               body: JSON.stringify({ ids: cuisineIds })
-//             }
-//           );
-
-//           if (cuisinesResponse.ok) {
-//             const cuisinesData = await cuisinesResponse.json();
-//             setCuisines(cuisinesData);
-//           }
-//         }
-
-//         // 4) Fetch ingredients
-//         if (recipeData.ingredients?.length) {
-//           const ids = recipeData.ingredients.map(x =>
-//             typeof x === "string" ? x : x.$oid
-//           );
-
-//           const ingredientsResponse = await fetch(
-//             "http://localhost:5000/api/ingredients/many",
-//             {
-//               method: "POST",
-//               headers: { "Content-Type": "application/json" },
-//               body: JSON.stringify({ ids })
-//             }
-//           );
-
-//           if (ingredientsResponse.ok) {
-//             const ingredientsData = await ingredientsResponse.json();
-//             setIngredients(ingredientsData);
-//           }
-//         }
-
-//       } catch (err) {
-//         setError(err.message);
-//       } finally {
-//         setLoading(false);
-//       }
-//     };
-
-//     fetchRecipeData();
-//   }, []);
-
-//   if (loading)
-//     return <div className="page-loading">Loading recipe...</div>;
-//   if (error)
-//     return <div className="page-error">Error: {error}</div>;
-//   if (!recipe)
-//     return <div className="page-error">Recipe not found</div>;
-
-//   return (
-//     <div className="recipe-page">
-
-//       {/* Header */}
-//       <header className="top-header">
-//         <h1>Recipe Finder</h1>
-//         <a href="/recipes" className="back-btn">← Back to Recipes</a>
-//       </header>
-
-//       {/* Full-width hero image */}
-//       <div className="hero-image-container">
-//         <img
-//           src={recipe.image}
-//           alt={recipe.title}
-//           className="hero-image"
-//         />
-//       </div>
-
-//       {/* Two-column layout */}
-//       <div className="content-layout">
-
-//         {/* LEFT COLUMN */}
-//         <div className="left-column">
-
-//           {/* Title */}
-//           <h2 className="recipe-title-new">{recipe.title}</h2>
-
-//           {/* Tags */}
-//           <div className="tag-list">
-//             {recipe.tags?.map((tag, i) => (
-//               <span key={i} className="tag-pill">{tag}</span>
-//             ))}
-//           </div>
-
-//           {/* Stats */}
-//           <div className="stats-grid">
-//             <div className="stat-box">
-//               <h4>{recipe.servings || "-"}</h4>
-//               <p>Servings</p>
-//             </div>
-
-//             <div className="stat-box">
-//               <h4>{recipe.calories || 0}</h4>
-//               <p>Calories</p>
-//             </div>
-
-//             <div className="stat-box">
-//               <h4>{recipe.rating.toFixed(1)}</h4>
-//               <p>Rating</p>
-//             </div>
-
-//             <div className="stat-box">
-//               <h4>{recipe.comments_count}</h4>
-//               <p>Reviews</p>
-//             </div>
-//           </div>
-
-//           {/* Instructions */}
-//           <section className="instructions-section-new">
-//             <h3>Cooking Instructions</h3>
-
-//             {recipe.summary ? (
-//               <div className="instruction-step-card">
-//                 <div className="step-number">1</div>
-//                 <p>{recipe.summary}</p>
-//               </div>
-//             ) : (
-//               <p>No instructions available.</p>
-//             )}
-//           </section>
-
-//           {/* Cuisines */}
-//           <section className="cuisine-section-new">
-//             <h3>Cuisines</h3>
-//             <div className="cuisine-tag-list">
-//               {cuisines.length > 0 ? (
-//                 cuisines.map(c => (
-//                   <a
-//                     key={c._id?.$oid || c._id}
-//                     href={`/cuisines/${encodeURIComponent(c.name)}`}
-//                     className="cuisine-pill"
-//                   >
-//                     {c.name}
-//                   </a>
-//                 ))
-//               ) : (
-//                 <span>No cuisines available.</span>
-//               )}
-//             </div>
-//           </section>
-
-//           {/* Reviews */}
-//           <RecipeReviews recipe={recipe} />
-
-//         </div>
-
-//         {/* RIGHT COLUMN (INGREDIENTS) */}
-//         <aside className="right-column">
-//           <div className="ingredients-box-new">
-//             <h3>Ingredients</h3>
-
-//             <div className="ingredient-list">
-//               {ingredients.length > 0 ? (
-//                 ingredients.map((ing, i) => (
-//                   <div key={i} className="ingredient-row">
-//                     <span className="ing-name">{ing.name}</span>
-//                     <span className="ing-qty">
-//                       {ing.quantity || ''} {ing.unit || ''}
-//                     </span>
-//                   </div>
-//                 ))
-//               ) : (
-//                 <p>No ingredients found.</p>
-//               )}
-//             </div>
-
-//           </div>
-//         </aside>
-
-//       </div>
-//     </div>
-//   );
-// };
-
-// export default RecipeFinder;
 
 // RecipeFinder.jsx (Redesigned Layout)
 import React, { useState, useEffect } from "react";
 import "./recipespages.css";
 import RecipeReviews from "./RecipeReviews";
-import bgLogo from "../assets/images/bg.png"; // Ensure this path is correct
+import bgLogo from "../assets/images/bg.png"; 
 
 const RecipeFinder = () => {
   const [recipe, setRecipe] = useState(null);
@@ -256,7 +11,7 @@ const RecipeFinder = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cuisines, setCuisines] = useState([]);
-  const [dietaryPrefs, setDietaryPrefs] = useState([]); // ✅ new state
+  const [dietaryPrefs, setDietaryPrefs] = useState([]); 
 
   // Helper function to strip HTML tags
   const stripHtmlTags = (html) => {
@@ -406,7 +161,7 @@ const RecipeFinder = () => {
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "10px 40px",
+          padding: "10px 50px",
           backgroundColor: "#fff",
           boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
         }}
@@ -416,10 +171,19 @@ const RecipeFinder = () => {
           <img
             src={bgLogo}
             alt="Chef Cap"
-            style={{ width: "50px", marginRight: "10px" }}
+            style={{ width: "45px", marginRight: "10px" }}
           />
 
-          <h1>CooKar</h1>
+          <h1
+            style={{
+              fontSize: "32px",
+              fontWeight: "bold",
+              color: "#4B2E2E",
+              margin: 0,
+            }}
+          >
+            CooKar
+          </h1>
         </div>
       </header>
 
@@ -428,22 +192,26 @@ const RecipeFinder = () => {
           ← Back to Recipes
         </a>
       </div> */}
-      <div style={{margin:"0px 125px"}}>
+      <div style={{ margin: "0px 55px" }}>
         <div className="back-btn-block">
           <a href="/recipes" className="back-btn">
             ← Back to Recipes
           </a>
         </div>
 
-        {/* Full-width hero image */}
-        <div className="hero-image-container">
-          <img src={recipe.image} alt={recipe.title} className="hero-image" />
-        </div>
-
         {/* Two-column layout */}
         <div className="content-layout">
           {/* LEFT COLUMN */}
           <div className="left-column">
+            {/* Full-width hero image */}
+            <div className="hero-image-container">
+              <img
+                src={recipe.image}
+                alt={recipe.title}
+                className="hero-image"
+              />
+            </div>
+
             {/* Title */}
             {/* Title in a box */}
             <div className="recipe-title-box">
@@ -452,13 +220,13 @@ const RecipeFinder = () => {
             {/* <h2 className="recipe-title-new">{recipe.title}</h2> */}
 
             {/* Tags */}
-            <div className="tag-list">
+            {/* <div className="tag-list">
               {recipe.tags?.map((tag, i) => (
                 <span key={i} className="tag-pill">
                   {tag}
                 </span>
               ))}
-            </div>
+            </div> */}
 
             {/* Stats */}
             <div className="stats-grid">
@@ -485,55 +253,96 @@ const RecipeFinder = () => {
 
             {/* Instructions */}
             <section className="instructions-section-new">
-              <h3>Cooking Instructions</h3>
-
-              {recipe.summary || recipe.instructions ? (
-                <div className="instruction-step-card">
-                  <div className="step-number">1</div>
-                  <p>{stripHtmlTags(recipe.summary || recipe.instructions)}</p>
+              <div className="instruction-step-card">
+                <h3>Cooking Instructions</h3>
+                <div className="instruction-steps">
+                  {recipe.summary || recipe.instructions ? (
+                    recipe.summary
+                      .split(/\d*\.\s/) // Split by numbers like "1. ", "2. "
+                      .filter((step) => step.trim() !== "")
+                      .map((step, index) => (
+                        <div key={index} className="step-row">
+                          <div className="step-number">{index + 1}</div>
+                          <p className="step-text">{step.trim()}</p>
+                        </div>
+                      ))
+                  ) : (
+                    //   <div className="instruction-step-card">
+                    //   <div className="step-number">1</div>
+                    //   <p>{stripHtmlTags(recipe.summary || recipe.instructions)}</p>
+                    // </div>
+                    <p>No instructions available.</p>
+                  )}
                 </div>
-              ) : (
-                <p>No instructions available.</p>
-              )}
+              </div>
             </section>
 
             {/* Cuisines */}
-            <section className="cuisine-section-new">
-              <h3>Cuisines</h3>
-              <div className="cuisine-tag-list">
-                {cuisines.length > 0 ? (
-                  cuisines.map((c) => (
-                    <a
-                      key={c._id?.$oid || c._id}
-                      href={`/cuisines/${encodeURIComponent(c.name)}`}
-                      className="cuisine-pill"
-                    >
-                      {c.name}
-                    </a>
-                  ))
-                ) : (
-                  <span>No cuisines available.</span>
-                )}
+            <section className="generic-section-new">
+              <div className="generic-box">
+                <h3>Cuisines</h3>
+                <div className="generic-tag-list">
+                  {cuisines.length > 0 ? (
+                    cuisines.map((c) => (
+                      // <div
+                      //   key={c._id?.$oid || c._id}
+                      //   href={`/cuisines/${encodeURIComponent(c.name)}`}
+                      //   className="cuisine-pill"
+                      // >
+                      <div
+                        key={c._id?.$oid || c._id}
+                        style={{
+                          backgroundColor: "#e2e1e1ff",
+                          padding: "4px 10px",
+                          borderRadius: "12px",
+                          fontSize: "14px",
+                          fontWeight: "500",
+                          color: "#000",
+                          border: "1px solid #868686",
+                        }}
+                      >
+                        {c.name}
+                      </div>
+
+                      // </div>
+                    ))
+                  ) : (
+                    <span>No cuisines available.</span>
+                  )}
+                </div>
               </div>
             </section>
 
             {/* Dietary Preferences ✅ */}
-            <section className="dietary-section-new">
-              <h3>Dietary Preferences</h3>
-              <div className="dietary-tag-list">
-                {dietaryPrefs.length > 0 ? (
-                  dietaryPrefs.map((d) => (
-                    <a
-                      key={d._id?.$oid || d._id}
-                      href={`/dietary/${encodeURIComponent(d.name)}`}
-                      className="dietary-pill"
+            <section className="generic-section-new">
+              <div className="generic-box">
+                <h3>Dietary Preferences</h3>
+                <div className="generic-tag-list">
+                  {recipe.dietaryNames?.length > 0 ? (
+                    <div
+                      style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}
                     >
-                      {d.name}
-                    </a>
-                  ))
-                ) : (
-                  <span>No dietary preferences available.</span>
-                )}
+                      {recipe.dietaryNames.map((diet, index) => (
+                        <span
+                          key={index}
+                          style={{
+                            backgroundColor: "#e2e1e1ff",
+                            padding: "4px 10px",
+                            borderRadius: "12px",
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            color: "#000",
+                            border: "1px solid #868686",
+                          }}
+                        >
+                          {diet}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p style={{ color: "#777", margin: 0 }}>None specified</p>
+                  )}
+                </div>
               </div>
             </section>
 
@@ -569,3 +378,4 @@ const RecipeFinder = () => {
 };
 
 export default RecipeFinder;
+
