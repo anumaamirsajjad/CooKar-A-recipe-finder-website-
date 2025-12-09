@@ -163,63 +163,14 @@
 
 
 
-/**
- * 🎨 DESIGN PATTERNS IMPLEMENTED:
- * 
- * 1. ✅ ADAPTER PATTERN:
- *    - RecipeCard adapts raw recipe data to display format
- *    - Handles different data formats (ratingAvg vs rating, servingSize vs servings)
- *    - Normalizes inconsistent API responses
- * 
- * 2. ✅ DECORATOR PATTERN:
- *    - stripHtmlTags decorates/wraps HTML content
- *    - shortenText decorates text with truncation
- *    - renderKeyIngredients decorates ingredient list with formatting
- * 
- * 3. ✅ PRESENTER PATTERN:
- *    - RecipeCard is presentational component
- *    - Receives data via props, doesn't fetch
- *    - Pure presentation logic
- * 
- * 4. ✅ STRATEGY PATTERN:
- *    - Different display strategies for ingredients (objects vs strings)
- *    - Conditional rendering based on data availability
- * 
- * 5. ✅ TEMPLATE METHOD PATTERN:
- *    - Card layout follows fixed template
- *    - Image → Title → Rating → Cuisine/Dietary → Servings → Ingredients → Method → Comments
- *    - Content varies but structure is consistent
- *
- * 🎨 DESIGN PRINCIPLES APPLIED:
- * 
- * 1. SINGLE RESPONSIBILITY PRINCIPLE (SRP):
- *    - RecipeCard component has ONE job: render a single recipe card
- *    - Each helper function has ONE specific purpose
- *    - stripHtmlTags only strips HTML, shortenText only truncates, etc.
- * 
- * 2. DRY (Don't Repeat Yourself):
- *    - Helper functions eliminate code duplication
- *    - Text processing logic centralized in reusable functions
- * 
- * 3. PURE FUNCTIONS:
- *    - stripHtmlTags, shortenText, renderKeyIngredients are pure functions
- *    - Same input always produces same output, no side effects
- * 
- * 4. SEPARATION OF CONCERNS:
- *    - Presentation logic (JSX) separate from data transformation (helpers)
- *    - Styling separated into inline styles for component encapsulation
- */
-
 // src/components/RecipeCard.jsx
 import React from "react";
 import { Link } from "react-router-dom";
 
-// 🔹 ADAPTER PATTERN: Normalizes different recipe data formats
 const RecipeCard = ({ recipe }) => {
   console.log("Recipe object:", recipe); // Debug
 
-  // 🔹 DECORATOR PATTERN: Strips HTML tags from text (wraps/enhances text)
-  // Pure function that decorates HTML content into plain text
+  // Helper to strip HTML tags
   const stripHtmlTags = (html) => {
     if (!html) return "";
     const tmp = document.createElement("DIV");
@@ -227,8 +178,7 @@ const RecipeCard = ({ recipe }) => {
     return tmp.textContent || tmp.innerText || "";
   };
 
-  // 🔹 DECORATOR PATTERN: Truncates/decorates text with ellipsis
-  // Pure function that enhances text with length limit
+  // LIMIT text by words
   const shortenText = (text, limit = 20) => {
     if (!text) return "";
     const words = text.split(" ");
@@ -241,8 +191,7 @@ const RecipeCard = ({ recipe }) => {
     shortenText(stripHtmlTags(recipe.instructions || recipe.summary), 25);
   }
 
-  // 🔹 DECORATOR PATTERN: Formats/decorates ingredient list for display
-  // Transforms raw ingredient objects into formatted display string
+  // Helper to render ingredients as string
   const renderKeyIngredients = () => {
     if (!recipe.ingredients || recipe.ingredients.length === 0) return "N/A";
     return (
@@ -255,8 +204,6 @@ const RecipeCard = ({ recipe }) => {
     );
   };
 
-  // 🔹 COMPONENT RENDERING (Separation of Concerns)
-  // JSX handles ONLY presentation, data processing done by pure functions above
   return (
     <Link
       to={`/recipes/${encodeURIComponent(recipe.title)}`}

@@ -1,69 +1,10 @@
-/**
- * 🎨 DESIGN PATTERNS IMPLEMENTED:
- * 
- * 1. ✅ ADAPTER PATTERN:
- *    - getRecipeTitleFromUrl adapts URL to recipe title format
- *    - stripHtmlTags adapts HTML to plain text
- *    - Component adapts different field names (servingSize/servings, ratingAvg/rating)
- * 
- * 2. ✅ OBSERVER PATTERN (React State):
- *    - Recipe, ingredients, cuisines are observables
- *    - UI automatically updates when state changes
- *    - Notification system observes success events
- * 
- * 3. ✅ COMPOSITE PATTERN:
- *    - RecipeFinder composed of sections (hero, stats, instructions, reviews)
- *    - RecipeReviews nested as child component
- *    - Tree structure of components
- * 
- * 4. ✅ DECORATOR PATTERN:
- *    - stripHtmlTags decorates HTML content
- *    - showSuccessNotification decorates actions with feedback
- * 
- * 5. ✅ TEMPLATE METHOD PATTERN:
- *    - Page layout follows fixed template
- *    - Header → Hero Image → Stats → Instructions → Cuisines → Dietary → Reviews → Ingredients
- *    - Content varies but structure consistent
- * 
- * 6. ✅ PRESENTER/CONTROLLER PATTERN:
- *    - RecipeFinder orchestrates data flow
- *    - Manages state, delegates to child components
- *    - Separates business logic from presentation
- *
- * 🎨 DESIGN PRINCIPLES APPLIED:
- * 
- * 1. SINGLE RESPONSIBILITY PRINCIPLE (SRP):
- *    - RecipeFinder: orchestrates recipe detail page display
- *    - stripHtmlTags: handles ONLY HTML sanitization
- *    - getRecipeTitleFromUrl: handles ONLY URL parsing
- *    - showSuccessNotification: handles ONLY notification display
- * 
- * 2. DRY (Don't Repeat Yourself):
- *    - stripHtmlTags utility prevents repeating sanitization logic
- *    - Notification logic centralized in one function
- * 
- * 3. SEPARATION OF CONCERNS:
- *    - Data fetching separate from rendering
- *    - URL parsing separate from API calls
- *    - Notification logic separate from main component
- * 
- * 4. COMPOSITION:
- *    - RecipeReviews component composed into page
- *    - Page built from smaller, focused sections
- * 
- * 5. DEPENDENCY INJECTION:
- *    - Recipe data passed to child components as props
- *    - RecipeReviews receives recipe via props, doesn't fetch itself
- */
-
-// RecipeFinder.jsx (Recipe Detail Page)
+// RecipeFinder.jsx (Redesigned Layout)
 import React, { useState, useEffect } from "react";
 import "./recipespages.css";
 import RecipeReviews from "./RecipeReviews";
 import bgLogo from "../assets/images/bg.png"; 
 
 const RecipeFinder = () => {
-  // 🔹 STATE MANAGEMENT (SRP - each state has single purpose)
   const [recipe, setRecipe] = useState(null);
   const [ingredients, setIngredients] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -73,8 +14,7 @@ const RecipeFinder = () => {
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState("");
 
-  // 🔹 DECORATOR PATTERN: Strips/decorates HTML content to plain text
-  // Wraps HTML and enhances it by removing tags
+  // Helper function to strip HTML tags
   const stripHtmlTags = (html) => {
     if (!html) return "";
     const tmp = document.createElement("DIV");
@@ -82,8 +22,7 @@ const RecipeFinder = () => {
     return tmp.textContent || tmp.innerText || "";
   };
 
-  // 🔹 UTILITY FUNCTION: Notification handler (SRP)
-  // Single purpose: display success notifications
+  // Show notification function
   const showSuccessNotification = (message) => {
     setNotificationMessage(message);
     setShowNotification(true);
@@ -94,8 +33,7 @@ const RecipeFinder = () => {
     }, 3000);
   };
 
-  // 🔹 ADAPTER PATTERN: Converts URL format to recipe title
-  // Adapts browser URL to application data format
+  // Extract title from URL
   const getRecipeTitleFromUrl = () => {
     const parts = window.location.pathname.split("/");
     return (
@@ -104,9 +42,6 @@ const RecipeFinder = () => {
     );
   };
 
-  // 🔹 DATA FETCHING EFFECT (Separation of Concerns)
-  // Handles ONLY data loading from API, not rendering
-  // Backend enrichment eliminates need for multiple API calls
   useEffect(() => {
     const fetchRecipeData = async () => {
       try {

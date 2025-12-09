@@ -1,46 +1,9 @@
-/**
- * 🎨 DESIGN PATTERNS IMPLEMENTED:
- * 
- * 1. ✅ BUILDER PATTERN:
- *    - formFields state builds recipe object step by step
- *    - Ingredients array built dynamically with addIngredient
- *    - Final recipe constructed in handleSubmit
- * 
- * 2. ✅ COMPOSITE PATTERN:
- *    - AddRecipe contains multiple IngredientRow components
- *    - Form composed of smaller input components
- *    - Tree structure: AddRecipe → IngredientRow[]
- * 
- * 3. ✅ TEMPLATE METHOD PATTERN:
- *    - handleSubmit defines workflow template
- *    - Validate → Build object → API call → Callback → Close
- *    - Fixed sequence of steps
- * 
- * 4. ✅ STRATEGY PATTERN:
- *    - isFormValid encapsulates validation strategy
- *    - Can swap validation rules without changing form
- * 
- * 5. ✅ OBSERVER PATTERN (React State):
- *    - formFields observable, UI reacts to changes
- *    - ingredients array observed for dynamic rendering
- * 
- * 6. ✅ PRESENTER PATTERN:
- *    - IngredientRow is presentational component
- *    - AddRecipe is container managing state
- *
- * 🎨 DESIGN PRINCIPLES APPLIED (SOLID):
- * - SRP: Each component/function has single responsibility
- * - OCP: Adding ingredients without modifying core logic
- * - DRY: Validation and handlers centralized
- */
-
 import React, { useState } from 'react';
 
-// 🔹 CONSTANT: Configuration data (SRP)
+// SRP: Isolated constant for measurement options
 const measurementOptions = ['Cup', 'Tablespoon', 'Teaspoon', 'Gram', 'Kilogram'];
 
-// 🔹 PRESENTATIONAL COMPONENT: IngredientRow (COMPOSITE PATTERN element)
-// Single ingredient in the composite ingredient list
+// SRP: Separate small presentational component for ingredient row
 function IngredientRow({ ingredient, index, handleIngredientChange }) {
   return (
     <div style={{ display: "flex", gap: "10px" }}>
@@ -78,10 +41,7 @@ function IngredientRow({ ingredient, index, handleIngredientChange }) {
   );
 }
 
-// 🔹 CONTAINER COMPONENT: AddRecipe (BUILDER + TEMPLATE METHOD patterns)
-// Builds recipe object incrementally and submits via fixed workflow
 function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
-  // 🔹 BUILDER PATTERN: Recipe constructed step-by-step through state
   const [formFields, setFormFields] = useState({
     title: '',
     cuisine: '',
@@ -110,8 +70,7 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
     }));
   };
 
-  // 🔹 BUILDER PATTERN: Add ingredient to recipe being built
-  // Dynamically extends ingredients array
+  // OCP: Adding ingredient without modifying existing logic
   const addIngredient = () => {
     setFormFields((prevDetails) => ({
       ...prevDetails,
@@ -119,8 +78,7 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
     }));
   };
 
-  // 🔹 STRATEGY PATTERN: Validation strategy encapsulated
-  // Can swap validation rules without changing form logic
+  // SRP: Separate validation helper
   const isFormValid = () => {
     if (
       !formFields.title ||
@@ -136,9 +94,6 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
     );
   };
 
-  // 🔹 TEMPLATE METHOD PATTERN: Fixed submission workflow
-  // Steps: validate → build object → API call → success callback → close modal
-  // Sequence is fixed but individual steps can be customized
   const handleSubmit = (e) => {
     e.preventDefault();
 
