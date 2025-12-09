@@ -1,6 +1,45 @@
 import React, { useState } from 'react';
 
+// SRP: Isolated constant for measurement options
 const measurementOptions = ['Cup', 'Tablespoon', 'Teaspoon', 'Gram', 'Kilogram'];
+
+// SRP: Separate small presentational component for ingredient row
+function IngredientRow({ ingredient, index, handleIngredientChange }) {
+  return (
+    <div style={{ display: "flex", gap: "10px" }}>
+      <input
+        type="text"
+        name="name"
+        placeholder="Ingredient Name"
+        value={ingredient.name}
+        onChange={(e) => handleIngredientChange(index, e)}
+        required
+        style={inputStyle}
+      />
+      <input
+        type="number"
+        name="quantity"
+        placeholder="Quantity"
+        value={ingredient.quantity}
+        onChange={(e) => handleIngredientChange(index, e)}
+        required
+        style={inputStyle}
+      />
+      <select
+        name="measurement"
+        value={ingredient.measurement}
+        onChange={(e) => handleIngredientChange(index, e)}
+        required
+        style={inputStyle}
+      >
+        <option value="">Select Measurement</option>
+        {measurementOptions.map((option, idx) => (
+          <option key={idx} value={option}>{option}</option>
+        ))}
+      </select>
+    </div>
+  );
+}
 
 function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
   const [formFields, setFormFields] = useState({
@@ -13,24 +52,25 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
     image: '',
   });
 
+  // SRP: Dedicated handler for text input fields
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormFields((prevDetails) => ({
-      ...prevDetails,
-      [name]: value,
-    }));
+    setFormFields((prevDetails) => ({ ...prevDetails, [name]: value }));
   };
 
+  // SRP: Dedicated handler for ingredient updates
   const handleIngredientChange = (index, e) => {
     const { name, value } = e.target;
-    const newIngredients = [...formFields.ingredients];
-    newIngredients[index][name] = value;
+    const updatedIngredients = [...formFields.ingredients];
+    updatedIngredients[index][name] = value;
+
     setFormFields((prevDetails) => ({
       ...prevDetails,
-      ingredients: newIngredients,
+      ingredients: updatedIngredients,
     }));
   };
 
+  // OCP: Adding ingredient without modifying existing logic
   const addIngredient = () => {
     setFormFields((prevDetails) => ({
       ...prevDetails,
@@ -38,24 +78,30 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
     }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // Check for empty fields
+  // SRP: Separate validation helper
+  const isFormValid = () => {
     if (
       !formFields.title ||
       !formFields.cuisine ||
       !formFields.dietaryPreference ||
       !formFields.instructions ||
       !formFields.servingSize ||
-      !formFields.image ||
-      formFields.ingredients.some(ing => !ing.name || !ing.quantity || !ing.measurement)
-    ) {
+      !formFields.image
+    ) return false;
+
+    return !formFields.ingredients.some(
+      (ing) => !ing.name || !ing.quantity || !ing.measurement
+    );
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    if (!isFormValid()) {
       alert("Please fill in all fields.");
       return;
     }
 
-    // Create the new recipe object
     const newRecipe = {
       title: formFields.title,
       cuisineNames: [formFields.cuisine],
@@ -66,20 +112,16 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
       image: formFields.image,
     };
 
-    // POST the new recipe to backend
     fetch("http://localhost:5000/api/recipes", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(newRecipe),
     })
       .then(async (res) => {
         if (res.ok) {
           const createdRecipe = await res.json();
-          // Pass back the enriched recipe from backend (includes rating, ids, etc.)
-          if (handleAddRecipe) handleAddRecipe(createdRecipe);
-          if (closeModal) closeModal();
+          handleAddRecipe && handleAddRecipe(createdRecipe);
+          closeModal && closeModal();
           alert("Recipe added successfully");
         } else {
           const json = await res.json().catch(() => ({}));
@@ -95,8 +137,17 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
   return (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <h2>Add Recipe</h2>
-      <input type="text" name="title" placeholder="Recipe Title" value={formFields.title} onChange={handleInputChange} required style={inputStyle} />
-      
+
+      <input
+        type="text"
+        name="title"
+        placeholder="Recipe Title"
+        value={formFields.title}
+        onChange={handleInputChange}
+        required
+        style={inputStyle}
+      />
+
       <select name="cuisine" value={formFields.cuisine} onChange={handleInputChange} required style={inputStyle}>
         <option value="">Select Cuisine</option>
         {cuisines.map((cuisine, idx) => (
@@ -104,7 +155,13 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
         ))}
       </select>
 
-      <select name="dietaryPreference" value={formFields.dietaryPreference} onChange={handleInputChange} required style={inputStyle}>
+      <select
+        name="dietaryPreference"
+        value={formFields.dietaryPreference}
+        onChange={handleInputChange}
+        required
+        style={inputStyle}
+      >
         <option value="">Select Dietary Preference</option>
         {dietaryPrefs.map((diet, idx) => (
           <option key={idx} value={diet.name}>{diet.name}</option>
@@ -112,22 +169,45 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
       </select>
 
       {formFields.ingredients.map((ingredient, index) => (
-        <div key={index} style={{ display: "flex", gap: "10px" }}>
-          <input type="text" name="name" placeholder="Ingredient Name" value={ingredient.name} onChange={(e) => handleIngredientChange(index, e)} required style={inputStyle} />
-          <input type="number" name="quantity" placeholder="Quantity" value={ingredient.quantity} onChange={(e) => handleIngredientChange(index, e)} required style={inputStyle} />
-          <select name="measurement" value={ingredient.measurement} onChange={(e) => handleIngredientChange(index, e)} required style={inputStyle}>
-            <option value="">Select Measurement</option>
-            {measurementOptions.map((option, idx) => (
-              <option key={idx} value={option}>{option}</option>
-            ))}
-          </select>
-        </div>
+        <IngredientRow
+          key={index}
+          ingredient={ingredient}
+          index={index}
+          handleIngredientChange={handleIngredientChange}
+        />
       ))}
+
       <button type="button" onClick={addIngredient} style={buttonStyle}>Add Ingredient</button>
 
-      <textarea name="instructions" placeholder="Instructions" value={formFields.instructions} onChange={handleInputChange} required style={inputStyle}></textarea>
-      <input type="text" name="servingSize" placeholder="Serving Size" value={formFields.servingSize} onChange={handleInputChange} required style={inputStyle} />
-      <input type="text" name="image" placeholder="Image URL" value={formFields.image} onChange={handleInputChange} required style={inputStyle} />
+      <textarea
+        name="instructions"
+        placeholder="Instructions"
+        value={formFields.instructions}
+        onChange={handleInputChange}
+        required
+        style={inputStyle}
+      />
+
+      <input
+        type="text"
+        name="servingSize"
+        placeholder="Serving Size"
+        value={formFields.servingSize}
+        onChange={handleInputChange}
+        required
+        style={inputStyle}
+      />
+
+      <input
+        type="text"
+        name="image"
+        placeholder="Image URL"
+        value={formFields.image}
+        onChange={handleInputChange}
+        required
+        style={inputStyle}
+      />
+
       <button type="submit" style={buttonStyle}>Submit Recipe</button>
     </form>
   );

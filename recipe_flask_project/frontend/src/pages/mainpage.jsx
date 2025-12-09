@@ -1,9 +1,85 @@
-// export default MainPage;
+// MainPage refactored with SOLID principles (React - JavaScript)
+
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import bgLogo from "../assets/images/bg.png"; // Ensure this path is correct
-import AddRecipe from "./addrecipe"; // Import AddRecipe component
+import bgLogo from "../assets/images/bg.png";
+import AddRecipe from "./addrecipe";
 import RecipeCard from "../components/recipecard";
+
+/**
+ * 🔹 SERVICE LAYER (SRP + DIP)
+ * All API calls moved to separate functions.
+ * MainPage component no longer handles fetch logic directly.
+ */
+const fetchCuisines = async () => {
+  const res = await fetch("http://localhost:5000/api/cuisines");
+  return res.json();
+};
+
+const fetchDietaryPrefs = async () => {
+  const res = await fetch("http://localhost:5000/api/dietary-preferences");
+  return res.json();
+};
+
+const fetchRecipesData = async () => {
+  const res = await fetch("http://localhost:5000/api/recipes");
+  return res.json();
+};
+
+/**
+ * 🔹 Ingredient + Dietary helper functions (SRP)
+ */
+const fetchIngredientsByIds = async (ids) => {
+  const res = await fetch("http://localhost:5000/api/ingredients/many", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ids }),
+  });
+  return res.ok ? res.json() : [];
+};
+
+const fetchDietaryByIds = async (ids) => {
+  const res = await fetch(
+    "http://localhost:5000/api/dietary-preferences/many",
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    }
+  );
+  return res.ok ? res.json() : [];
+};
+
+/**
+ * 🔹 PURE FUNCTION TO TRANSFORM RECIPE
+ * Applies OCP — extendable without modifying MainPage logic.
+ */
+const enrichRecipe = async (recipe) => {
+  let ingredients = recipe.ingredients || [];
+  let dietaryNames = [];
+
+  if (recipe.ingredients?.length) {
+    const ids = recipe.ingredients.map((x) => (typeof x === "string" ? x : x.$oid));
+    ingredients = await fetchIngredientsByIds(ids);
+  }
+
+  if (recipe.diet_ids?.length) {
+    const ids = recipe.diet_ids.map((id) => id.$oid || id);
+    const dietaryData = await fetchDietaryByIds(ids);
+    if (Array.isArray(dietaryData)) dietaryNames = dietaryData.map((d) => d.name);
+  }
+
+  return {
+    ...recipe,
+    ingredients,
+    dietaryNames,
+    servingSize: recipe.servings || recipe.serving_size || recipe.servings,
+  };
+};
+
+/** ----------------------------------------------------------------------
+ *                          MAIN COMPONENT
+ * ---------------------------------------------------------------------- */
 
 function MainPage() {
   const [recipes, setRecipes] = useState([]);
@@ -13,217 +89,91 @@ function MainPage() {
   const [dietaryPrefs, setDietaryPrefs] = useState([]);
   const [selectedCuisine, setSelectedCuisine] = useState("");
   const [selectedDietary, setSelectedDietary] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false); // Manage modal visibility
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
+  /**
+   * 🔹 EFFECT HANDLES ONLY COORDINATION — SRP
+   * Fetch logic lives in dedicated service functions.
+   */
   useEffect(() => {
-    const fetchFilters = async () => {
+    const loadData = async () => {
       try {
-        const [cuisineRes, dietaryRes] = await Promise.all([
-          fetch("http://localhost:5000/api/cuisines"),
-          fetch("http://localhost:5000/api/dietary-preferences"),
+        const [cuisineData, dietaryData, recipeData] = await Promise.all([
+          fetchCuisines(),
+          fetchDietaryPrefs(),
+          fetchRecipesData(),
         ]);
-        const cuisinesData = await cuisineRes.json();
-        const dietaryData = await dietaryRes.json();
-        setCuisines(Array.isArray(cuisinesData) ? cuisinesData : []);
+
+        setCuisines(Array.isArray(cuisineData) ? cuisineData : []);
         setDietaryPrefs(Array.isArray(dietaryData) ? dietaryData : []);
+
+        const enrichedRecipes = await Promise.all(recipeData.map(enrichRecipe));
+        setRecipes(enrichedRecipes);
       } catch (err) {
-        console.error("Error fetching filters:", err);
-      }
-    };
-
-    const fetchRecipes = async () => {
-      try {
-        const res = await fetch("http://localhost:5000/api/recipes");
-        const data = await res.json();
-
-        const recipesWithIngredientsAndDietary = await Promise.all(
-          data.map(async (recipe) => {
-            // 1️⃣ Fetch ingredients
-            let ingredientsData = recipe.ingredients || [];
-            if (recipe.ingredients?.length) {
-              const ids = recipe.ingredients.map((x) =>
-                typeof x === "string" ? x : x.$oid
-              );
-              const ingRes = await fetch(
-                "http://localhost:5000/api/ingredients/many",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ ids }),
-                }
-              );
-              if (ingRes.ok) ingredientsData = await ingRes.json();
-            }
-
-            // 2️⃣ Fetch dietary preferences
-            let dietaryNames = [];
-            if (recipe.diet_ids?.length) {
-              const ids = recipe.diet_ids.map((id) => id.$oid || id);
-              const dietaryRes = await fetch(
-                "http://localhost:5000/api/dietary-preferences/many",
-                {
-                  method: "POST",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ ids }),
-                }
-              );
-
-              ////////////////////////////////////////////////////////////////////////////////////////////////
-              if (dietaryRes.ok) {
-                const dietaryData = await dietaryRes.json();
-                console.log(
-                  "Dietary data for recipe",
-                  recipe.title,
-                  dietaryData
-                ); // <-- check this
-                if (Array.isArray(dietaryData)) {
-                  dietaryNames = dietaryData.map((d) => d.name);
-                  console.log("Mapped dietaryNames:", dietaryNames); // <-- check this
-                }
-              }
-              ////////////////////////////////////////////////////////////////////////////////////////////////
-
-              // if (dietaryRes.ok) {
-              //   const dietaryData = await dietaryRes.json();
-              //   if (Array.isArray(dietaryData)) {
-              //     dietaryNames = dietaryData.map((d) => d.name);
-              //   }
-              // }
-            }
-
-            console.log("FINAL RECIPE:", {
-              title: recipe.title,
-              diet_ids: recipe.diet_ids,
-              dietaryNames,
-            });
-
-            return {
-              ...recipe,
-              ingredients: ingredientsData,
-              dietaryNames, // ✅ now correctly populated
-              servingSize:
-                recipe.servings || recipe.serving_size || recipe.servings,
-            };
-          })
-        );
-
-        setRecipes(recipesWithIngredientsAndDietary);
-      } catch (err) {
-        console.error("Error fetching recipes:", err);
+        console.error("Error loading data:", err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchFilters();
-    fetchRecipes();
+    loadData();
   }, []);
 
-  const filteredRecipes = recipes.filter((recipe) => {
-    const matchesSearch = searchTerm
-      ? recipe.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (recipe.ingredients || []).some((ing) =>
-          ing.name?.toLowerCase().includes(searchTerm.toLowerCase())
-        )
-      : true;
+  /**
+   * 🔹 PURE FUNCTION FOR FILTERING (SRP)
+   */
+  const filterRecipes = (recipesList) => {
+    return recipesList.filter((recipe) => {
+      const matchesSearch = searchTerm
+        ? recipe.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          recipe.ingredients.some((ing) =>
+            ing.name?.toLowerCase().includes(searchTerm.toLowerCase())
+          )
+        : true;
 
-    const matchesCuisine = selectedCuisine
-      ? (recipe.cuisineNames || []).includes(selectedCuisine)
-      : true;
+      const matchesCuisine = selectedCuisine
+        ? (recipe.cuisineNames || []).includes(selectedCuisine)
+        : true;
 
-    const matchesDietary = selectedDietary
-      ? (recipe.dietaryNames || []).includes(selectedDietary)
-      : true;
+      const matchesDietary = selectedDietary
+        ? (recipe.dietaryNames || []).includes(selectedDietary)
+        : true;
 
-    return matchesSearch && matchesCuisine && matchesDietary;
-  });
-
-  const openModal = () => {
-    setIsModalOpen(true);
+      return matchesSearch && matchesCuisine && matchesDietary;
+    });
   };
 
-  const closeModal = () => {
+  const filteredRecipes = filterRecipes(recipes);
+
+  const handleAddRecipe = (recipe) => {
+    setRecipes((prev) => [...prev, recipe]);
     setIsModalOpen(false);
   };
 
-  const handleAddRecipe = (recipe) => {
-    // Add the newly created recipe directly to the recipes state
-    setRecipes((prevRecipes) => [...prevRecipes, recipe]);
-    closeModal();
-  };
-
-  // Helper function to strip HTML tags
-  // const stripHtmlTags = (html) => {
-  //   if (!html) return "";
-  //   const tmp = document.createElement("DIV");
-  //   tmp.innerHTML = html;
-  //   return tmp.textContent || tmp.innerText || "";
-  // };
-
   if (loading) {
-    return (
-      <div style={{ textAlign: "center", padding: "40px" }}>
-        Loading recipes...
-      </div>
-    );
+    return <div style={{ textAlign: "center", padding: "40px" }}>Loading recipes...</div>;
   }
 
   return (
-    <div
-      style={{ minHeight: "100vh", backgroundColor: "#fdf6e3", padding: "0" }}
-    >
-      {/* Header */}
-      <header
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "20px 40px",
-          backgroundColor: "#fff",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-        }}
-      >
+    <div style={{ minHeight: "100vh", backgroundColor: "#fdf6e3" }}>
+      {/* HEADER */}
+      <header style={styles.header}>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <img
-            src={bgLogo}
-            alt="Chef Cap"
-            style={{ width: "50px", marginRight: "10px" }}
-          />
-          <h1
-            style={{
-              fontSize: "36px",
-              fontWeight: "bold",
-              color: "#4B2E2E",
-              margin: 0,
-            }}
-          >
-            CooKar
-          </h1>
+          <img src={bgLogo} alt="Chef Cap" style={styles.logo} />
+          <h1 style={styles.title}>CooKar</h1>
         </div>
-        <button
-          onClick={openModal}
-          style={{
-            padding: "10px 20px",
-            backgroundColor: "#4B2E2E",
-            color: "#fff",
-            border: "none",
-            borderRadius: "8px",
-            cursor: "pointer",
-          }}
-        >
+        <button onClick={() => setIsModalOpen(true)} style={styles.addButton}>
           Add Recipe
         </button>
       </header>
 
-      {/* Modal for Add Recipe */}
+      {/* MODAL */}
       {isModalOpen && (
         <div style={modalStyles.overlay}>
           <div style={modalStyles.modal}>
-            <button onClick={closeModal} style={modalStyles.closeButton}>
-              X
-            </button>
+            <button onClick={() => setIsModalOpen(false)} style={modalStyles.closeButton}>X</button>
             <AddRecipe
-              closeModal={closeModal}
+              closeModal={() => setIsModalOpen(false)}
               handleAddRecipe={handleAddRecipe}
               cuisines={cuisines}
               dietaryPrefs={dietaryPrefs}
@@ -232,171 +182,45 @@ function MainPage() {
         </div>
       )}
 
-      {/* Search + Filters */}
-      {/* <div
-        style={{
-          maxWidth: "80%",
-          borderRadius: "12px",
-          backgroundColor: "#fff",
-          padding: "30px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          margin: "20px auto",
-        }}
-      >
-        <div
-          style={{
-            display: "flex",
-            gap: "16px",
-            marginBottom: "30px",
-            flexWrap: "wrap",
-            justifyContent: "center",
-          }}
-        >
-          <input
-            type="text"
-            placeholder="Search recipes by name or ingredient..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              flex: "1 1 300px",
-              padding: "14px 18px",
-              fontSize: "16px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              backgroundColor: "#fff",
-            }}
-          />
-          <select
-            value={selectedDietary}
-            onChange={(e) => setSelectedDietary(e.target.value)}
-            style={{
-              flex: "1 1 300px",
-              padding: "12px 16px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              fontSize: "16px",
-              backgroundColor: "#fff",
-            }}
-          >
-            <option value="">All Preferences</option>
-            {dietaryPrefs.map((diet, idx) => (
-              <option key={idx} value={diet.name}>
-                {diet.name}
-              </option>
-            ))}
-          </select>
-          <select
-            value={selectedCuisine}
-            onChange={(e) => setSelectedCuisine(e.target.value)}
-            style={{
-              flex: "1 1 300px",
-              padding: "12px 16px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              fontSize: "16px",
-              backgroundColor: "#fff",
-            }}
-          >
-            <option value="">All Cuisines</option>
-            {cuisines.map((cuisine, idx) => (
-              <option key={idx} value={cuisine.name}>
-                {cuisine.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div> */}
-
-      {/* Search + Filters */}
-      <div
-        style={{
-          maxWidth: "80%",
-          borderRadius: "12px",
-          backgroundColor: "#fff",
-          padding: "30px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-          margin: "20px auto",
-        }}
-      >
-        {/* Search Box - full width */}
+      {/* SEARCH + FILTERS */}
+      <div style={styles.filterContainer}>
         <div style={{ marginBottom: "20px" }}>
           <input
             type="text"
-            placeholder="Search recipes by name or ingredient..."
+            placeholder="Search recipes..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            style={{
-              width: "97%",
-              padding: "14px 18px",
-              fontSize: "16px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              backgroundColor: "#fff",
-            }}
+            style={styles.searchInput}
           />
         </div>
 
-        {/* Filters row */}
-        <div
-          style={{
-            display: "flex",
-            gap: "16px",
-            flexWrap: "wrap",
-            justifyContent: "space-between",
-          }}
-        >
+        <div style={styles.filterRow}>
           <select
             value={selectedDietary}
             onChange={(e) => setSelectedDietary(e.target.value)}
-            style={{
-              flex: "1 1 48%", // half width with some gap
-              padding: "12px 16px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              fontSize: "16px",
-              backgroundColor: "#fff",
-            }}
+            style={styles.filterSelect}
           >
             <option value="">All Preferences</option>
             {dietaryPrefs.map((diet, idx) => (
-              <option key={idx} value={diet.name}>
-                {diet.name}
-              </option>
+              <option key={idx} value={diet.name}>{diet.name}</option>
             ))}
           </select>
 
           <select
             value={selectedCuisine}
             onChange={(e) => setSelectedCuisine(e.target.value)}
-            style={{
-              flex: "1 1 48%", // half width with some gap
-              padding: "12px 16px",
-              borderRadius: "8px",
-              border: "1px solid #ccc",
-              fontSize: "16px",
-              backgroundColor: "#fff",
-            }}
+            style={styles.filterSelect}
           >
             <option value="">All Cuisines</option>
             {cuisines.map((cuisine, idx) => (
-              <option key={idx} value={cuisine.name}>
-                {cuisine.name}
-              </option>
+              <option key={idx} value={cuisine.name}>{cuisine.name}</option>
             ))}
           </select>
         </div>
       </div>
 
-      {/* Recipe Cards */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
-          gap: "30px",
-          padding: "20px 100px",
-          alignItems: "stretch",
-        }}
-      >
+      {/* RECIPE GRID */}
+      <div style={styles.recipeGrid}>
         {filteredRecipes.map((recipe, idx) => (
           <RecipeCard key={idx} recipe={recipe} />
         ))}
@@ -405,18 +229,68 @@ function MainPage() {
   );
 }
 
+/** ----------------------------------------------------------------------
+ *                         STYLES (SRP)
+ * ---------------------------------------------------------------------- */
+
+const styles = {
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "20px 40px",
+    backgroundColor: "#fff",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  },
+  logo: { width: "50px", marginRight: "10px" },
+  title: { fontSize: "36px", color: "#4B2E2E", fontWeight: "bold", margin: 0 },
+  addButton: {
+    padding: "10px 20px",
+    backgroundColor: "#4B2E2E",
+    color: "#fff",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+  },
+  filterContainer: {
+    maxWidth: "80%",
+    margin: "20px auto",
+    padding: "30px",
+    backgroundColor: "#fff",
+    borderRadius: "12px",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+  },
+  searchInput: {
+    width: "97%",
+    padding: "14px", borderRadius: "8px",
+    border: "1px solid #ccc",
+  },
+  filterRow: {
+    display: "flex",
+    gap: "16px", flexWrap: "wrap",
+  },
+  filterSelect: {
+    flex: "1 1 48%",
+    padding: "12px 16px",
+    borderRadius: "8px",
+    border: "1px solid #ccc",
+  },
+  recipeGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))",
+    gap: "30px",
+    padding: "20px 100px",
+  },
+};
+
 const modalStyles = {
   overlay: {
     position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
+    top: 0, left: 0, right: 0, bottom: 0,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 1000,
   },
   modal: {
     background: "#fff",
