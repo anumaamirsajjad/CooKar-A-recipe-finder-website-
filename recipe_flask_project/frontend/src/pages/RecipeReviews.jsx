@@ -1,6 +1,66 @@
+/**
+ * 🎨 DESIGN PATTERNS IMPLEMENTED:
+ * 
+ * 1. ✅ FACADE PATTERN (reviewsService):
+ *    - Provides simplified interface to complex backend API
+ *    - Hides HTTP implementation details
+ *    - Single point of contact for review-related operations
+ * 
+ * 2. ✅ COMPOSITE PATTERN:
+ *    - RecipeReviews contains ReviewForm and ReviewList
+ *    - ReviewList contains multiple ReviewItem components
+ *    - Tree structure: RecipeReviews → ReviewList → ReviewItem[]
+ * 
+ * 3. ✅ OBSERVER PATTERN (React State):
+ *    - Comments state observable, UI reacts to changes
+ *    - Rating state triggers visual updates
+ *    - Auto-reload after submission observes data changes
+ * 
+ * 4. ✅ TEMPLATE METHOD PATTERN:
+ *    - ReviewForm defines submission workflow template
+ *    - Validation → API calls → State update → Callback
+ *    - Steps executed in fixed order
+ * 
+ * 5. ✅ PRESENTER PATTERN:
+ *    - StarRating, ReviewItem, ReviewList are presentational
+ *    - RecipeReviews is container/presenter
+ *    - Clear separation of concerns
+ * 
+ * 6. ✅ STRATEGY PATTERN (Star Rating):
+ *    - Star rendering strategy based on rating/hover state
+ *    - Visual feedback strategy can be swapped
+ *
+ * 🎨 DESIGN PRINCIPLES APPLIED:
+ * 
+ * 1. SINGLE RESPONSIBILITY PRINCIPLE (SRP):
+ *    - RecipeReviews: orchestrates review functionality
+ *    - StarRating: handles ONLY star rating UI
+ *    - ReviewItem: renders ONLY a single review
+ *    - ReviewList: manages ONLY list of reviews
+ *    - ReviewForm: handles ONLY form input and submission
+ * 
+ * 2. DEPENDENCY INVERSION PRINCIPLE (DIP):
+ *    - reviewsService abstracts API calls
+ *    - Components depend on service interface, not implementation
+ *    - Easy to swap API calls without changing components
+ * 
+ * 3. OPEN/CLOSED PRINCIPLE (OCP):
+ *    - StarRating can be extended with new features without modification
+ *    - Review components can be styled/enhanced without changing logic
+ * 
+ * 4. COMPOSITION OVER INHERITANCE:
+ *    - Small, focused components composed together
+ *    - ReviewList composed of multiple ReviewItems
+ * 
+ * 5. SEPARATION OF CONCERNS:
+ *    - Service layer (API) separated from UI layer (components)
+ *    - Each component has clear, distinct responsibility
+ */
+
 import React, { useState, useEffect } from "react";
 
-// ⭐ Service Layer for API calls (DIP)
+// 🔹 FACADE PATTERN: Simplified API interface
+// Single point of access for all review-related backend operations
 const reviewsService = {
   fetchComments: async (recipeId) => {
     const response = await fetch(`http://localhost:5000/api/comments/recipe/${recipeId}`);
@@ -26,7 +86,9 @@ const reviewsService = {
   },
 };
 
-// ⭐ StarRating Component (SRP + OCP)
+// 🔹 PRESENTATIONAL COMPONENT: StarRating (STRATEGY PATTERN)
+// Different rendering strategies based on state (filled/hover/empty)
+// Visual feedback strategy can be customized without changing component structure
 const StarRating = ({ rating, hoverRating, setRating, setHoverRating }) => {
   return (
     <div className="rating-input" style={{ padding: "0px 10px" }}>
@@ -58,7 +120,8 @@ const StarRating = ({ rating, hoverRating, setRating, setHoverRating }) => {
   );
 };
 
-// ⭐ ReviewItem Component
+// 🔹 PRESENTATIONAL COMPONENT: ReviewItem (SRP)
+// Single responsibility: Render a single review/comment
 const ReviewItem = ({ comment }) => (
   <div
     className="comment-item"
@@ -80,7 +143,8 @@ const ReviewItem = ({ comment }) => (
   </div>
 );
 
-// ⭐ ReviewList Component
+// 🔹 CONTAINER COMPONENT: ReviewList (COMPOSITE PATTERN)
+// Manages collection of ReviewItem components in tree structure
 const ReviewList = ({ comments }) => (
   <div className="comments-list" style={{ margin: "14px 0 14px 10px" }}>
     <h4>User Reviews</h4>
@@ -94,7 +158,9 @@ const ReviewList = ({ comments }) => (
   </div>
 );
 
-// ⭐ ReviewForm Component
+// 🔹 FORM COMPONENT: ReviewForm (TEMPLATE METHOD PATTERN)
+// Defines fixed workflow: validate → submit to APIs → update state → callback
+// Steps execute in specific order but can be customized
 const ReviewForm = ({ recipeId, onReviewSubmit }) => {
   const [userName, setUserName] = useState("");
   const [userComment, setUserComment] = useState("");

@@ -1,4 +1,38 @@
-// MainPage refactored with SOLID principles (React - JavaScript)
+/**
+ * 🎨 DESIGN PATTERNS IMPLEMENTED:
+ * 
+ * 1. ✅ SERVICE LAYER PATTERN (Facade Pattern):
+ *    - fetchCuisines, fetchDietaryPrefs, fetchRecipesData abstract API complexity
+ *    - MainPage component doesn't need to know HTTP implementation details
+ *    - Provides simplified interface to complex subsystem (backend API)
+ * 
+ * 2. ✅ OBSERVER PATTERN (via React State):
+ *    - useState hooks create observables (recipes, cuisines, etc.)
+ *    - UI automatically re-renders when state changes
+ *    - Components "observe" state and react to changes
+ * 
+ * 3. ✅ STRATEGY PATTERN:
+ *    - filterRecipes() encapsulates filtering algorithm
+ *    - Can swap filtering strategies without changing MainPage
+ *    - Different filter criteria (search, cuisine, dietary) applied via strategy
+ * 
+ * 4. ✅ FACTORY PATTERN:
+ *    - enrichRecipe() transforms raw recipe data into enriched objects
+ *    - Creates consistent recipe objects regardless of input format
+ *    - Centralizes object creation logic
+ * 
+ * 5. ✅ COMPOSITION PATTERN:
+ *    - MainPage composed of smaller components (RecipeCard, AddRecipe)
+ *    - "Has-a" relationship instead of inheritance
+ *    - Flexible component reuse
+ * 
+ * 6. ✅ PRESENTER PATTERN (React Component Pattern):
+ *    - MainPage acts as presenter/controller
+ *    - Manages state and business logic
+ *    - Delegates rendering to child components
+ */
+
+// MainPage with Design Patterns (React - JavaScript)
 
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
@@ -7,9 +41,9 @@ import AddRecipe from "./addrecipe";
 import RecipeCard from "../components/recipecard";
 
 /**
- * 🔹 SERVICE LAYER (SRP + DIP)
- * All API calls moved to separate functions.
- * MainPage component no longer handles fetch logic directly.
+ * 🔹 SERVICE LAYER / FACADE PATTERN
+ * Provides simplified interface to complex backend API
+ * Hides HTTP implementation details from components
  */
 const fetchCuisines = async () => {
   const res = await fetch("http://localhost:5000/api/cuisines");
@@ -51,8 +85,9 @@ const fetchDietaryByIds = async (ids) => {
 };
 
 /**
- * 🔹 PURE FUNCTION TO TRANSFORM RECIPE
- * Applies OCP — extendable without modifying MainPage logic.
+ * 🔹 FACTORY PATTERN: Recipe object creation
+ * Transforms raw API data into standardized enriched recipe objects
+ * Handles different input formats and creates consistent output
  */
 const enrichRecipe = async (recipe) => {
   let ingredients = recipe.ingredients || [];
@@ -78,10 +113,14 @@ const enrichRecipe = async (recipe) => {
 };
 
 /** ----------------------------------------------------------------------
- *                          MAIN COMPONENT
+ *              MAIN COMPONENT (PRESENTER PATTERN)
+ * Manages application state and orchestrates data flow
+ * Delegates rendering to presentational components
  * ---------------------------------------------------------------------- */
 
 function MainPage() {
+  // 🔹 OBSERVER PATTERN (via React State)
+  // State changes automatically trigger UI re-renders
   const [recipes, setRecipes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -92,8 +131,8 @@ function MainPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   /**
-   * 🔹 EFFECT HANDLES ONLY COORDINATION — SRP
-   * Fetch logic lives in dedicated service functions.
+   * 🔹 EFFECT HOOK: Data loading coordination
+   * Uses Service Layer (Facade) to fetch data
    */
   useEffect(() => {
     const loadData = async () => {
@@ -120,7 +159,9 @@ function MainPage() {
   }, []);
 
   /**
-   * 🔹 PURE FUNCTION FOR FILTERING (SRP)
+   * 🔹 STRATEGY PATTERN: Filtering algorithm
+   * Encapsulates filtering logic that can be swapped/extended
+   * Different strategies: search by name, filter by cuisine, filter by dietary
    */
   const filterRecipes = (recipesList) => {
     return recipesList.filter((recipe) => {
