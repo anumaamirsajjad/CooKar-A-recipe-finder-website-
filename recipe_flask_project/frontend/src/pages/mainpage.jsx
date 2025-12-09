@@ -77,6 +77,34 @@ const enrichRecipe = async (recipe) => {
   };
 };
 
+/**
+ * 🔹 OBSERVER PATTERN: Modal State Observer
+ * Allows multiple components to react to modal state changes.
+ */
+class ModalObserver {
+  constructor() {
+    this.subscribers = [];
+  }
+
+  subscribe(callback) {
+    this.subscribers.push(callback);
+    return () => {
+      this.subscribers = this.subscribers.filter(sub => sub !== callback);
+    };
+  }
+
+  notify(eventType, data = null) {
+    this.subscribers.forEach(callback => {
+      if (typeof callback === 'function') {
+        callback(eventType, data);
+      }
+    });
+  }
+}
+
+// Create a singleton modal observer instance
+export const modalObserver = new ModalObserver();
+
 /** ----------------------------------------------------------------------
  *                          MAIN COMPONENT
  * ---------------------------------------------------------------------- */
@@ -90,6 +118,27 @@ function MainPage() {
   const [selectedCuisine, setSelectedCuisine] = useState("");
   const [selectedDietary, setSelectedDietary] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // OBSERVER PATTERN: Subscribe to modal events
+  useEffect(() => {
+    const unsubscribe = modalObserver.subscribe((eventType, data) => {
+      switch (eventType) {
+        case 'MODAL_OPENED':
+          console.log('Modal was opened externally');
+          break;
+        case 'MODAL_CLOSED':
+          console.log('Modal was closed externally');
+          break;
+        case 'RECIPE_ADDED':
+          if (data) {
+            console.log('New recipe added via observer:', data.title);
+          }
+          break;
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
 
   /**
    * 🔹 EFFECT HANDLES ONLY COORDINATION — SRP
@@ -148,6 +197,21 @@ function MainPage() {
   const handleAddRecipe = (recipe) => {
     setRecipes((prev) => [...prev, recipe]);
     setIsModalOpen(false);
+    
+    // OBSERVER PATTERN: Notify subscribers about the new recipe
+    modalObserver.notify('RECIPE_ADDED', recipe);
+  };
+
+  const handleOpenModal = () => {
+    setIsModalOpen(true);
+    // OBSERVER PATTERN: Notify subscribers that modal was opened
+    modalObserver.notify('MODAL_OPENED');
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    // OBSERVER PATTERN: Notify subscribers that modal was closed
+    modalObserver.notify('MODAL_CLOSED');
   };
 
   if (loading) {
@@ -162,7 +226,7 @@ function MainPage() {
           <img src={bgLogo} alt="Chef Cap" style={styles.logo} />
           <h1 style={styles.title}>CooKar</h1>
         </div>
-        <button onClick={() => setIsModalOpen(true)} style={styles.addButton}>
+        <button onClick={handleOpenModal} style={styles.addButton}>
           Add Recipe
         </button>
       </header>
@@ -171,9 +235,9 @@ function MainPage() {
       {isModalOpen && (
         <div style={modalStyles.overlay}>
           <div style={modalStyles.modal}>
-            <button onClick={() => setIsModalOpen(false)} style={modalStyles.closeButton}>X</button>
+            <button onClick={handleCloseModal} style={modalStyles.closeButton}>X</button>
             <AddRecipe
-              closeModal={() => setIsModalOpen(false)}
+              closeModal={handleCloseModal}
               handleAddRecipe={handleAddRecipe}
               cuisines={cuisines}
               dietaryPrefs={dietaryPrefs}
