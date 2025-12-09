@@ -1,4 +1,3 @@
-
 // RecipeFinder.jsx (Redesigned Layout)
 import React, { useState, useEffect } from "react";
 import "./recipespages.css";
@@ -12,6 +11,8 @@ const RecipeFinder = () => {
   const [error, setError] = useState(null);
   const [cuisines, setCuisines] = useState([]);
   const [dietaryPrefs, setDietaryPrefs] = useState([]); 
+  const [showNotification, setShowNotification] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
 
   // Helper function to strip HTML tags
   const stripHtmlTags = (html) => {
@@ -19,6 +20,17 @@ const RecipeFinder = () => {
     const tmp = document.createElement("DIV");
     tmp.innerHTML = html;
     return tmp.textContent || tmp.innerText || "";
+  };
+
+  // Show notification function
+  const showSuccessNotification = (message) => {
+    setNotificationMessage(message);
+    setShowNotification(true);
+    
+    // Auto-hide notification after 3 seconds
+    setTimeout(() => {
+      setShowNotification(false);
+    }, 3000);
   };
 
   // Extract title from URL
@@ -145,6 +157,11 @@ const RecipeFinder = () => {
     fetchRecipeData();
   }, []);
 
+  // Function to pass to RecipeReviews for handling successful submission
+  const handleReviewSubmitted = () => {
+    showSuccessNotification("Review submitted successfully!");
+  };
+
   if (loading) return <div className="page-loading">Loading recipe...</div>;
   if (error) return <div className="page-error">Error: {error}</div>;
   if (!recipe) return <div className="page-error">Recipe not found</div>;
@@ -154,6 +171,16 @@ const RecipeFinder = () => {
       style={{ minHeight: "100vh", backgroundColor: "#fdf6e3", padding: "0" }}
       className="recipe-page"
     >
+      {/* Success Notification */}
+      {showNotification && (
+        <div className="notification-box">
+          <div className="notification-content">
+            <span className="notification-icon">✓</span>
+            <span className="notification-text">{notificationMessage}</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header
         style={{
@@ -234,6 +261,8 @@ const RecipeFinder = () => {
                 <h4>{recipe.servings || "-"}</h4>
                 <p>Servings</p>
               </div>
+
+             
 
               <div className="stat-box">
                 <h4>{recipe.rating.toFixed(1)}</h4>
@@ -341,8 +370,11 @@ const RecipeFinder = () => {
               </div>
             </section>
 
-            {/* Reviews */}
-            <RecipeReviews recipe={recipe} />
+            {/* Reviews - Pass the success handler */}
+            <RecipeReviews 
+              recipe={recipe} 
+              onReviewSubmitted={handleReviewSubmitted}
+            />
           </div>
 
           {/* RIGHT COLUMN (INGREDIENTS) */}
@@ -368,9 +400,61 @@ const RecipeFinder = () => {
           </aside>
         </div>
       </div>
+      
+      {/* Add CSS for notification */}
+      <style jsx="true">{`
+        .notification-box {
+          position: fixed;
+          top: 20px;
+          right: 20px;
+          background-color: #4CAF50;
+          color: white;
+          padding: 15px 20px;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+          z-index: 1000;
+          animation: slideIn 0.3s ease-out;
+          max-width: 300px;
+        }
+        
+        .notification-content {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        
+        .notification-icon {
+          font-size: 18px;
+          font-weight: bold;
+        }
+        
+        .notification-text {
+          font-size: 14px;
+          font-weight: 500;
+        }
+        
+        @keyframes slideIn {
+          from {
+            transform: translateX(100%);
+            opacity: 0;
+          }
+          to {
+            transform: translateX(0);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+          }
+          to {
+            opacity: 0;
+          }
+        }
+      `}</style>
     </div>
   );
 };
 
 export default RecipeFinder;
-

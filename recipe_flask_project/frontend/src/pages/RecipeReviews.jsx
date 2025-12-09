@@ -150,8 +150,8 @@ const ReviewForm = ({ recipeId, onReviewSubmit }) => {
   );
 };
 
-// ⭐ Main RecipeReviews Component
-const RecipeReviews = ({ recipe }) => {
+// ⭐ Main RecipeReviews Component - ACCEPT THE PROP HERE
+const RecipeReviews = ({ recipe, onReviewSubmitted }) => {
   const [comments, setComments] = useState([]);
   const [currentRating, setCurrentRating] = useState(recipe.rating || 0);
   const [commentsCount, setCommentsCount] = useState(recipe.comments_count || 0);
@@ -170,12 +170,17 @@ const RecipeReviews = ({ recipe }) => {
     loadComments();
   }, [recipeId]);
 
+  // UPDATE THIS FUNCTION
   const handleReviewSubmit = async ({ average_rating }) => {
     const data = await reviewsService.fetchComments(recipeId);
     setComments(data);
     setCurrentRating(average_rating);
     setCommentsCount(prev => prev + 1);
-    alert("Review submitted successfully!");
+    
+    // Call the notification callback instead of alert
+    if (onReviewSubmitted) {
+      onReviewSubmitted();
+    }
   };
 
   const renderStars = (avgRating) => {
