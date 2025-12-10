@@ -1,6 +1,80 @@
 import React, { useState, useEffect } from "react";
 
-// ⭐ Service Layer for API calls (DIP)
+// ⭐ Factory Pattern: Component Factory
+const ComponentFactory = {
+  createStarRating: (props) => {
+    return (
+      <div className="rating-input" style={{ padding: "0px 10px" }}>
+        {[1, 2, 3, 4, 5].map((star) => {
+          let isFilled = star <= props.rating;
+          if (props.hoverRating > props.rating) isFilled = star <= props.hoverRating;
+          const isHovered = props.hoverRating === star;
+
+          return (
+            <span
+              key={star}
+              onClick={() => props.setRating(star)}
+              onMouseEnter={() => props.setHoverRating(star)}
+              onMouseLeave={() => props.setHoverRating(0)}
+              style={{
+                cursor: "pointer",
+                fontSize: "26px",
+                marginRight: "5px",
+                transition: "color 0.2s ease, transform 0.2s ease",
+                color: isFilled ? "#FFD700" : "#ccc",
+                transform: isHovered ? "scale(1.2)" : "scale(1)",
+              }}
+            >
+              ★
+            </span>
+          );
+        })}
+      </div>
+    );
+  },
+
+  createReviewItem: (props) => {
+    return (
+      <div
+        className="comment-item"
+        style={{
+          padding: "10px 14px",
+          backgroundColor: "#f9f9f9",
+          borderRadius: "8px",
+          margin: "14px 0 14px 10px",
+          color: "#000",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
+          <strong>{props.comment.user}</strong>
+          <small>{new Date(props.comment.date).toLocaleDateString()}</small>
+        </div>
+        <p style={{ margin: 0, color: "#555", lineHeight: "1.4" }}>
+          {props.comment.comment || props.comment.commentText}
+        </p>
+      </div>
+    );
+  },
+
+  createReviewList: (props) => {
+    return (
+      <div className="comments-list" style={{ margin: "14px 0 14px 10px" }}>
+        <h4>User Reviews</h4>
+        {props.comments.length === 0 ? (
+          <p style={{ margin: "14px 0px 14px 14px", color: "#777" }}>
+            No reviews yet. Be the first to review this recipe!
+          </p>
+        ) : (
+          props.comments.map((comment, idx) => (
+            ComponentFactory.createReviewItem({ comment, key: idx })
+          ))
+        )}
+      </div>
+    );
+  }
+};
+
+// ⭐ Service Layer for API calls (DIP) - UNCHANGED
 const reviewsService = {
   fetchComments: async (recipeId) => {
     const response = await fetch(`http://localhost:5000/api/comments/recipe/${recipeId}`);
@@ -26,75 +100,22 @@ const reviewsService = {
   },
 };
 
-// ⭐ StarRating Component (SRP + OCP)
+// ⭐ StarRating Component (SRP + OCP) - Now using Factory Pattern
 const StarRating = ({ rating, hoverRating, setRating, setHoverRating }) => {
-  return (
-    <div className="rating-input" style={{ padding: "0px 10px" }}>
-      {[1, 2, 3, 4, 5].map((star) => {
-        let isFilled = star <= rating;
-        if (hoverRating > rating) isFilled = star <= hoverRating;
-        const isHovered = hoverRating === star;
-
-        return (
-          <span
-            key={star}
-            onClick={() => setRating(star)}
-            onMouseEnter={() => setHoverRating(star)}
-            onMouseLeave={() => setHoverRating(0)}
-            style={{
-              cursor: "pointer",
-              fontSize: "26px",
-              marginRight: "5px",
-              transition: "color 0.2s ease, transform 0.2s ease",
-              color: isFilled ? "#FFD700" : "#ccc",
-              transform: isHovered ? "scale(1.2)" : "scale(1)",
-            }}
-          >
-            ★
-          </span>
-        );
-      })}
-    </div>
-  );
+  return ComponentFactory.createStarRating({ rating, hoverRating, setRating, setHoverRating });
 };
 
-// ⭐ ReviewItem Component
-const ReviewItem = ({ comment }) => (
-  <div
-    className="comment-item"
-    style={{
-      padding: "10px 14px",
-      backgroundColor: "#f9f9f9",
-      borderRadius: "8px",
-      margin: "14px 0 14px 10px",
-      color: "#000",
-    }}
-  >
-    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px" }}>
-      <strong>{comment.user}</strong>
-      <small>{new Date(comment.date).toLocaleDateString()}</small>
-    </div>
-    <p style={{ margin: 0, color: "#555", lineHeight: "1.4" }}>
-      {comment.comment || comment.commentText}
-    </p>
-  </div>
-);
+// ⭐ ReviewItem Component - Now using Factory Pattern
+const ReviewItem = ({ comment }) => {
+  return ComponentFactory.createReviewItem({ comment });
+};
 
-// ⭐ ReviewList Component
-const ReviewList = ({ comments }) => (
-  <div className="comments-list" style={{ margin: "14px 0 14px 10px" }}>
-    <h4>User Reviews</h4>
-    {comments.length === 0 ? (
-      <p style={{ margin: "14px 0px 14px 14px", color: "#777" }}>
-        No reviews yet. Be the first to review this recipe!
-      </p>
-    ) : (
-      comments.map((comment, idx) => <ReviewItem key={idx} comment={comment} />)
-    )}
-  </div>
-);
+// ⭐ ReviewList Component - Now using Factory Pattern
+const ReviewList = ({ comments }) => {
+  return ComponentFactory.createReviewList({ comments });
+};
 
-// ⭐ ReviewForm Component
+// ⭐ ReviewForm Component - UNCHANGED
 const ReviewForm = ({ recipeId, onReviewSubmit }) => {
   const [userName, setUserName] = useState("");
   const [userComment, setUserComment] = useState("");
