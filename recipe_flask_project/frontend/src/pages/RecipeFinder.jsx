@@ -1,17 +1,13 @@
-// RecipeFinder.jsx (SOLID Refactored with Adapter Pattern)
+// RecipeFinder.jsx (SOLID Refactored)
 import React from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useRecipeDetails } from './hooks/useRecipeDetails';
 import { FavoriteButton } from './components/FavoriteButton';
 import { IngredientsTable } from './components/IngredientsTable';
-import { RecipeDataAdapter } from './adapters/RecipeDataAdapter';
 
 export default function RecipeFinder() {
   const { title } = useParams();
   const { recipe, ingredients, loading, error, isFavorite, toggleFavorite } = useRecipeDetails(title);
-
-  // Use adapter to transform recipe data for display
-  const adaptedRecipe = recipe ? RecipeDataAdapter.adaptForDisplay(recipe) : null;
 
   if (loading) return <div style={{ textAlign: 'center' }}>Loading recipe...</div>;
   if (error) return <div style={{ textAlign: 'center', color: 'red' }}>Error: {error}</div>;
@@ -32,8 +28,8 @@ export default function RecipeFinder() {
 
       <div style={{ maxWidth: '800px', margin: '0 auto', backgroundColor: '#fff', padding: '30px', borderRadius: '16px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
         <section style={{ marginBottom: '20px' }}>
-          <h2 style={{ color: '#4B2E2E' }}>{adaptedRecipe.displayTitle}</h2>
-          <p>{adaptedRecipe.displaySummary}</p>
+          <h2 style={{ color: '#4B2E2E' }}>{recipe.title}</h2>
+          <p>{recipe.summary || 'No instructions available.'}</p>
         </section>
 
         <section>
@@ -45,100 +41,7 @@ export default function RecipeFinder() {
   );
 }
 
-// ================ ADAPTER PATTERN IMPLEMENTATION ================
-
-// adapters/RecipeDataAdapter.js
-/**
- * 🔹 ADAPTER PATTERN: Adapts recipe data for different display formats
- * Think of it as a travel adapter plug - makes different data formats work together
- */
-export class RecipeDataAdapter {
-  /**
-   * Adapts recipe data for standard display
-   */
-  static adaptForDisplay(recipe) {
-    return {
-      // Original data preserved
-      original: recipe,
-      
-      // Adapted for display
-      displayTitle: this.formatTitle(recipe.title),
-      displaySummary: this.formatSummary(recipe.summary),
-      displayServings: this.formatServings(recipe.servings),
-      displayCookTime: this.formatTime(recipe.prep_time_minutes, recipe.cook_time_minutes),
-      
-      // Metadata
-      isAdapted: true,
-      adapterVersion: '1.0'
-    };
-  }
-  
-  /**
-   * Adapts recipe data for mobile display
-   */
-  static adaptForMobile(recipe) {
-    const adapted = this.adaptForDisplay(recipe);
-    return {
-      ...adapted,
-      displayTitle: this.truncateText(recipe.title, 40),
-      displaySummary: this.truncateText(recipe.summary, 150),
-    };
-  }
-  
-  /**
-   * Adapts recipe data for print/export
-   */
-  static adaptForExport(recipe) {
-    const adapted = this.adaptForDisplay(recipe);
-    return {
-      ...adapted,
-      displayTitle: recipe.title.toUpperCase(),
-      displaySummary: recipe.summary ? recipe.summary.replace(/<[^>]*>/g, '') : 'No instructions available.'
-    };
-  }
-  
-  // Helper methods
-  static formatTitle(title) {
-    return title ? title.charAt(0).toUpperCase() + title.slice(1) : 'Untitled Recipe';
-  }
-  
-  static formatSummary(summary) {
-    if (!summary) return 'No instructions available.';
-    
-    // Clean up HTML tags if present
-    const cleanSummary = summary.replace(/<[^>]*>/g, '');
-    
-    // Format paragraphs
-    return cleanSummary
-      .split('\n')
-      .filter(line => line.trim())
-      .map(line => line.trim())
-      .join('\n\n');
-  }
-  
-  static formatServings(servings) {
-    if (!servings) return 'Servings not specified';
-    return `Serves ${servings}`;
-  }
-  
-  static formatTime(prepTime, cookTime) {
-    if (!prepTime && !cookTime) return '';
-    
-    const parts = [];
-    if (prepTime) parts.push(`Prep: ${prepTime} min`);
-    if (cookTime) parts.push(`Cook: ${cookTime} min`);
-    
-    return parts.join(' | ');
-  }
-  
-  static truncateText(text, maxLength) {
-    if (!text) return '';
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
-  }
-}
-
-// FavoriteButton.jsx (UNCHANGED - just showing it's not modified)
+// FavoriteButton.jsx
 export function FavoriteButton({ isFavorite, onToggle }) {
   return (
     <button
@@ -158,7 +61,7 @@ export function FavoriteButton({ isFavorite, onToggle }) {
   );
 }
 
-// IngredientsTable.jsx (UNCHANGED - just showing it's not modified)
+// IngredientsTable.jsx
 export function IngredientsTable({ ingredients }) {
   return (
     <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -182,7 +85,7 @@ export function IngredientsTable({ ingredients }) {
   );
 }
 
-// hooks/useRecipeDetails.js (UNCHANGED - just showing it's not modified)
+// hooks/useRecipeDetails.js
 import { useState, useEffect } from 'react';
 import { recipeService } from '../services/recipeService';
 
@@ -229,7 +132,7 @@ export function useRecipeDetails(title) {
   return { recipe, ingredients, loading, error, isFavorite, toggleFavorite };
 }
 
-// services/recipeService.js (UNCHANGED - just showing it's not modified)
+// services/recipeService.js
 export const recipeService = {
   async getRecipeByTitle(title) {
     const res = await fetch(`http://localhost:5000/api/recipes/${encodeURIComponent(title)}`);

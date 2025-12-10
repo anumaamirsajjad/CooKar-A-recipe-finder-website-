@@ -275,30 +275,31 @@ const RecipeFinder = () => {
               </div>
             </div>
 
-      {/* Instructions */}
-<section className="instructions-section-new">
-  <div className="instruction-step-card">
-    <h3>Cooking Instructions</h3>
-    <div className="instruction-steps">
-
-      {recipe?.summary || recipe?.instructions ? (
-        (recipe?.summary || recipe?.instructions || "")
-          .split(/\b\d+\.\s/)
-          .filter(step => step.trim() !== "")
-          .map((step, index) => (
-            <div key={index} className="step-row">
-              <div className="step-number">{index + 1}</div>
-              <p className="step-text">{step.trim()}</p>
-            </div>
-          ))
-      ) : (
-        <p>No instructions available.</p>
-      )}
-
-    </div>
-  </div>
-</section>
-
+            {/* Instructions */}
+            <section className="instructions-section-new">
+              <div className="instruction-step-card">
+                <h3>Cooking Instructions</h3>
+                <div className="instruction-steps">
+                  {recipe.summary || recipe.instructions ? (
+                    recipe.summary
+                      .split(/\d*\.\s/) // Split by numbers like "1. ", "2. "
+                      .filter((step) => step.trim() !== "")
+                      .map((step, index) => (
+                        <div key={index} className="step-row">
+                          <div className="step-number">{index + 1}</div>
+                          <p className="step-text">{step.trim()}</p>
+                        </div>
+                      ))
+                  ) : (
+                    //   <div className="instruction-step-card">
+                    //   <div className="step-number">1</div>
+                    //   <p>{stripHtmlTags(recipe.summary || recipe.instructions)}</p>
+                    // </div>
+                    <p>No instructions available.</p>
+                  )}
+                </div>
+              </div>
+            </section>
 
             {/* Cuisines */}
             <section className="generic-section-new">

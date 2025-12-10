@@ -1,7 +1,9 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
-const measurementOptions = ["Unit", "Cup", "Tablespoon", "Teaspoon", "Gram", "Kilogram"];
+// SRP: Isolated constant for measurement options
+const measurementOptions = ['Cup', 'Tablespoon', 'Teaspoon', 'Gram', 'Kilogram'];
 
+// SRP: Separate small presentational component for ingredient row
 function IngredientRow({ ingredient, index, handleIngredientChange }) {
   return (
     <div style={{ display: "flex", gap: "10px" }}>
@@ -31,10 +33,8 @@ function IngredientRow({ ingredient, index, handleIngredientChange }) {
         style={inputStyle}
       >
         <option value="">Select Measurement</option>
-        {measurementOptions.map((m, idx) => (
-          <option key={idx} value={m}>
-            {m}
-          </option>
+        {measurementOptions.map((option, idx) => (
+          <option key={idx} value={option}>{option}</option>
         ))}
       </select>
     </div>
@@ -43,34 +43,42 @@ function IngredientRow({ ingredient, index, handleIngredientChange }) {
 
 function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
   const [formFields, setFormFields] = useState({
-    title: "",
-    cuisine: "",
-    dietaryPreference: "",
-    ingredients: [{ name: "", quantity: "", measurement: "" }],
-    instructions: "",
-    servingSize: "",
-    image: "",
+    title: '',
+    cuisine: '',
+    dietaryPreference: '',
+    ingredients: [{ name: '', quantity: '', measurement: '' }],
+    instructions: '',
+    servingSize: '',
+    image: '',
   });
 
+  // SRP: Dedicated handler for text input fields
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormFields((prev) => ({ ...prev, [name]: value }));
+    setFormFields((prevDetails) => ({ ...prevDetails, [name]: value }));
   };
 
+  // SRP: Dedicated handler for ingredient updates
   const handleIngredientChange = (index, e) => {
     const { name, value } = e.target;
-    const updated = [...formFields.ingredients];
-    updated[index][name] = value;
-    setFormFields((prev) => ({ ...prev, ingredients: updated }));
-  };
+    const updatedIngredients = [...formFields.ingredients];
+    updatedIngredients[index][name] = value;
 
-  const addIngredient = () => {
-    setFormFields((prev) => ({
-      ...prev,
-      ingredients: [...prev.ingredients, { name: "", quantity: "", measurement: "" }],
+    setFormFields((prevDetails) => ({
+      ...prevDetails,
+      ingredients: updatedIngredients,
     }));
   };
 
+  // OCP: Adding ingredient without modifying existing logic
+  const addIngredient = () => {
+    setFormFields((prevDetails) => ({
+      ...prevDetails,
+      ingredients: [...prevDetails.ingredients, { name: '', quantity: '', measurement: '' }],
+    }));
+  };
+
+  // SRP: Separate validation helper
   const isFormValid = () => {
     if (
       !formFields.title ||
@@ -79,56 +87,57 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
       !formFields.instructions ||
       !formFields.servingSize ||
       !formFields.image
-    )
-      return false;
+    ) return false;
+
     return !formFields.ingredients.some(
       (ing) => !ing.name || !ing.quantity || !ing.measurement
     );
   };
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
-    if (!isFormValid()) return alert("Please fill in all fields.");
 
-    const payload = {
+    if (!isFormValid()) {
+      alert("Please fill in all fields.");
+      return;
+    }
+
+    const newRecipe = {
       title: formFields.title,
+      cuisineNames: [formFields.cuisine],
+      dietaryNames: [formFields.dietaryPreference],
+      ingredients: formFields.ingredients,
       instructions: formFields.instructions,
+      servingSize: formFields.servingSize,
       image: formFields.image,
-      servingSize: parseInt(formFields.servingSize), // <-- convert to integer,
-      ingredients: formFields.ingredients.map((ing) => ({
-        name: ing.name,
-        quantity: ing.quantity,
-        measurement: ing.measurement,
-      })),
-      cuisine: formFields.cuisine,
-      dietaryPreference: formFields.dietaryPreference,
     };
 
-    try {
-      const res = await fetch("http://localhost:5000/api/recipes", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+    fetch("http://localhost:5000/api/recipes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(newRecipe),
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const createdRecipe = await res.json();
+          handleAddRecipe && handleAddRecipe(createdRecipe);
+          closeModal && closeModal();
+          alert("Recipe added successfully");
+        } else {
+          const json = await res.json().catch(() => ({}));
+          alert(json.error || json.message || "Failed to add recipe");
+        }
+      })
+      .catch((err) => {
+        console.error("Error adding recipe:", err);
+        alert("Network error while adding recipe");
       });
-
-      if (!res.ok) {
-        const json = await res.json();
-        return alert(json.error || "Failed to add recipe");
-      }
-
-      const createdRecipe = await res.json();
-      handleAddRecipe && handleAddRecipe(createdRecipe);
-      closeModal && closeModal();
-      alert("Recipe added successfully!");
-    } catch (err) {
-      console.error(err);
-      alert("Network error while adding recipe");
-    }
   };
 
   return (
     <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
       <h2>Add Recipe</h2>
+
       <input
         type="text"
         name="title"
@@ -138,14 +147,14 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
         required
         style={inputStyle}
       />
+
       <select name="cuisine" value={formFields.cuisine} onChange={handleInputChange} required style={inputStyle}>
         <option value="">Select Cuisine</option>
-        {cuisines.map((c, idx) => (
-          <option key={idx} value={c.name}>
-            {c.name}
-          </option>
+        {cuisines.map((cuisine, idx) => (
+          <option key={idx} value={cuisine.name}>{cuisine.name}</option>
         ))}
       </select>
+
       <select
         name="dietaryPreference"
         value={formFields.dietaryPreference}
@@ -154,24 +163,21 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
         style={inputStyle}
       >
         <option value="">Select Dietary Preference</option>
-        {dietaryPrefs.map((d, idx) => (
-          <option key={idx} value={d.name}>
-            {d.name}
-          </option>
+        {dietaryPrefs.map((diet, idx) => (
+          <option key={idx} value={diet.name}>{diet.name}</option>
         ))}
       </select>
 
-      {formFields.ingredients.map((ing, idx) => (
+      {formFields.ingredients.map((ingredient, index) => (
         <IngredientRow
-          key={idx}
-          ingredient={ing}
-          index={idx}
+          key={index}
+          ingredient={ingredient}
+          index={index}
           handleIngredientChange={handleIngredientChange}
         />
       ))}
-      <button type="button" onClick={addIngredient} style={buttonStyle}>
-        Add Ingredient
-      </button>
+
+      <button type="button" onClick={addIngredient} style={buttonStyle}>Add Ingredient</button>
 
       <textarea
         name="instructions"
@@ -191,6 +197,7 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
         required
         style={inputStyle}
       />
+
       <input
         type="text"
         name="image"
@@ -200,9 +207,8 @@ function AddRecipe({ closeModal, handleAddRecipe, cuisines, dietaryPrefs }) {
         required
         style={inputStyle}
       />
-      <button type="submit" style={buttonStyle}>
-        Submit Recipe
-      </button>
+
+      <button type="submit" style={buttonStyle}>Submit Recipe</button>
     </form>
   );
 }
