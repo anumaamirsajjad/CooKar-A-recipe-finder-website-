@@ -1,7 +1,8 @@
+import os
 from pymongo import MongoClient
 
 # Your connection string
-uri = "mongodb+srv://l230893_db_user:FuFtw6DUTItdC74F@cluster0.q3zi5uv.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"
+uri = os.getenv("MONGO_URI")
 
 # Connect to MongoDB Atlas
 client = MongoClient(uri)
